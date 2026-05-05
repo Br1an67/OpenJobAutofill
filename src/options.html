@@ -29,7 +29,6 @@
               <p class="hint">这里按通用网申栏目拆开填写，保存时会自动整理成 OpenJobAutofill 的本机资料备份格式。</p>
             </div>
           </div>
-          <textarea id="profileMarkdown" class="profile-markdown-source" spellcheck="false" hidden></textarea>
           <div id="profileSectionEditor" class="profile-section-editor"></div>
           <div class="actions profile-actions">
             <button id="saveProfile" type="button">保存资料</button>
@@ -38,7 +37,7 @@
             <button id="resetProfile" class="ghost" type="button">恢复模板</button>
             <button id="clearLocalData" class="ghost danger" type="button">清空本地数据</button>
           </div>
-          <input id="profileFileInput" type="file" accept="text/markdown,text/plain,.md,.markdown,.txt" hidden />
+          <input id="profileFileInput" type="file" accept="application/json,.json,.ojaf.json" hidden />
         </section>
 
         <aside class="resume-tips card">

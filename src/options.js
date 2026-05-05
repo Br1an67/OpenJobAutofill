@@ -13,7 +13,6 @@ const fields = {
   customHeadersJson: document.getElementById("customHeadersJson"),
   customBodyTemplate: document.getElementById("customBodyTemplate"),
   customResponsePath: document.getElementById("customResponsePath"),
-  profileMarkdown: document.getElementById("profileMarkdown"),
   profileSectionEditor: document.getElementById("profileSectionEditor"),
   profileNav: document.getElementById("profileNav"),
   profileTips: document.getElementById("profileTips"),
@@ -23,6 +22,9 @@ const fields = {
   apiPreview: document.getElementById("apiPreview"),
   status: document.getElementById("status")
 };
+
+const PROFILE_SCHEMA_VERSION = 2;
+const PROFILE_BACKUP_FORMAT = "OpenJobAutofillProfileBackup";
 
 const BASIC_FIELDS = [
   { key: "name", label: "姓名", type: "text", required: true, placeholder: "例如 李明（示例）" },
@@ -554,7 +556,7 @@ fields.apiMode.addEventListener("change", async () => {
 fields.baseUrl.addEventListener("change", () => maybeAutoRefreshModelList());
 fields.customUrl.addEventListener("change", () => maybeAutoRefreshModelList());
 fields.profileFileInput.addEventListener("change", importProfileFromFile);
-fields.profileSectionEditor.addEventListener("input", syncProfileMarkdownFromSections);
+fields.profileSectionEditor.addEventListener("input", handleProfileEditorInput);
 fields.profileSectionEditor.addEventListener("focusin", handleProfileSectionFocus);
 fields.profileSectionEditor.addEventListener("click", handleStructuredProfileClick);
 window.addEventListener("scroll", scheduleProfileSectionSync, { passive: true });
@@ -567,10 +569,9 @@ async function loadSettings() {
     const settings = await sendRuntimeMessage({ type: "AI_RESUME_GET_SETTINGS" });
     defaults = settings.defaults;
     applyApiConfig(settings.apiConfig);
-    fields.profileMarkdown.value = getProfileMarkdownFromSettings(settings);
     renderProfileNav();
     renderProfileTips(RESUME_SECTION_GUIDE[0]?.key);
-    renderMarkdownSectionEditor(fields.profileMarkdown.value);
+    renderProfileSectionEditor(getProfileV2FromSettings(settings));
     scheduleProfileSectionSync();
     updateModeBlocks();
     setStatus("设置已加载。");
@@ -632,11 +633,10 @@ async function saveApiSettings() {
 
 async function saveProfile() {
   try {
-    syncProfileMarkdownFromSections();
-    const profileMarkdown = fields.profileMarkdown.value;
+    const profileV2 = collectProfileV2FromEditor();
     await sendRuntimeMessage({
       type: "AI_RESUME_SAVE_SETTINGS",
-      payload: { profileMarkdown }
+      payload: { profileV2 }
     });
     setStatus("简历资料保存成功，已写入本机的 chrome.storage.local。");
     setInlineFeedback("简历资料已保存到本机。");
@@ -648,15 +648,15 @@ async function saveProfile() {
 
 async function exportProfile() {
   try {
-    syncProfileMarkdownFromSections();
-    const profileMarkdown = fields.profileMarkdown.value;
-    const blob = new Blob([profileMarkdown], {
-      type: "text/markdown;charset=utf-8"
+    const profileV2 = collectProfileV2FromEditor();
+    const backup = createProfileBackup(profileV2);
+    const blob = new Blob([`${JSON.stringify(backup, null, 2)}\n`], {
+      type: "application/json;charset=utf-8"
     });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `openjobautofill-profile-${new Date().toISOString().slice(0, 10)}.md`;
+    anchor.download = `openjobautofill-profile-${new Date().toISOString().slice(0, 10)}.ojaf.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -675,12 +675,11 @@ async function importProfileFromFile() {
 
   try {
     const text = await file.text();
-    const profileMarkdown = parseImportedProfileBackup(text);
-    fields.profileMarkdown.value = profileMarkdown;
-    renderMarkdownSectionEditor(fields.profileMarkdown.value);
+    const profileV2 = parseImportedProfileBackup(text);
+    renderProfileSectionEditor(profileV2);
     await sendRuntimeMessage({
       type: "AI_RESUME_SAVE_SETTINGS",
-      payload: { profileMarkdown }
+      payload: { profileV2 }
     });
     setStatus("已导入并保存到本机。侧边栏会立即读取这份简历资料。");
     setInlineFeedback("简历资料已保存到本机。");
@@ -698,8 +697,7 @@ function resetProfile() {
     return;
   }
 
-  fields.profileMarkdown.value = defaults?.profileMarkdown || profileToMarkdown(createEmptyProfile());
-  renderMarkdownSectionEditor(fields.profileMarkdown.value);
+  renderProfileSectionEditor(defaults?.profileV2 || createEmptyProfileV2());
   setStatus("已恢复空白模板。点击保存后生效。");
 }
 
@@ -1096,16 +1094,14 @@ function handleStructuredProfileClick(event) {
     const itemsRoot = sectionEl.querySelector("[data-structured-items]");
     const index = itemsRoot ? itemsRoot.querySelectorAll("[data-structured-item]").length : 0;
     itemsRoot?.insertAdjacentHTML("beforeend", renderStructuredItem(section, createBlankStructuredItem(section, index), index));
-    syncProfileMarkdownFromSections();
-    updateProfileCompletion();
+    handleProfileEditorInput();
     setStatus(`已添加一条 ${section.itemLabel || section.title}。`);
     return;
   }
 
   if (action === "remove-structured-item") {
     button.closest("[data-structured-item]")?.remove();
-    syncProfileMarkdownFromSections();
-    updateProfileCompletion();
+    handleProfileEditorInput();
     setStatus(`已删除一条 ${section.itemLabel || section.title}。`);
     return;
   }
@@ -1113,31 +1109,29 @@ function handleStructuredProfileClick(event) {
   if (action === "add-custom-row") {
     const target = button.closest("[data-custom-area]")?.querySelector("[data-custom-rows]");
     target?.insertAdjacentHTML("beforeend", renderCustomStructuredRow());
-    syncProfileMarkdownFromSections();
-    updateProfileCompletion();
+    handleProfileEditorInput();
     setStatus("已添加自定义字段。");
     return;
   }
 
   if (action === "remove-custom-row") {
     button.closest("[data-custom-row]")?.remove();
-    syncProfileMarkdownFromSections();
-    updateProfileCompletion();
+    handleProfileEditorInput();
     setStatus("已删除自定义字段。");
   }
 }
 
-function renderMarkdownSectionEditor(markdown) {
+function renderProfileSectionEditor(profileV2) {
   if (!fields.profileSectionEditor) {
     return;
   }
 
-  const parsed = parseStructuredProfileMarkdown(markdown);
+  const parsed = normalizeProfileV2(profileV2);
   const known = STRUCTURED_RESUME_SECTIONS.map((section) => renderStructuredSection(section, parsed.sections[section.key])).join("");
 
-  const extras = parsed.extraSections
+  const extras = (parsed.customSections || [])
     .map((section, index) => {
-      const key = `extra-${index}`;
+      const key = section.key || `extra-${index}`;
       return renderStructuredSection(
         {
           key,
@@ -1147,7 +1141,8 @@ function renderMarkdownSectionEditor(markdown) {
           isExtra: true
         },
         {
-          custom: section.custom?.length ? section.custom : parseKeyValueLines(section.body).custom
+          values: section.values || {},
+          custom: section.custom || []
         }
       );
     })
@@ -1483,11 +1478,7 @@ function normalizePlainText(value, maxLength = 120) {
   return text.length > maxLength ? text.slice(0, maxLength) : text;
 }
 
-function syncProfileMarkdownFromSections() {
-  if (!fields.profileSectionEditor || !fields.profileMarkdown) {
-    return;
-  }
-  fields.profileMarkdown.value = collectMarkdownFromSectionEditor();
+function handleProfileEditorInput() {
   updateProfileCompletion();
 }
 
@@ -1548,50 +1539,75 @@ function updateCompletionBadge(badge, text, state) {
   badge.classList.toggle("is-empty", state === "empty");
 }
 
-function collectMarkdownFromSectionEditor() {
-  const lines = [
-    "# OpenJobAutofill Resume Profile",
-    "",
-    "> 本文件只保存在本机。设置页用结构化表单填写，侧边栏和一键填写都会读取这份内容。",
-    ""
-  ];
-
-  fields.profileSectionEditor.querySelectorAll("[data-profile-section]").forEach((section) => {
-    const title = section.dataset.sectionTitle || "";
-    const body = collectStructuredSectionMarkdown(section).trim();
-    if (!title || !body) {
-      return;
-    }
-    lines.push(`## ${title}`, body, "");
-  });
-
-  return `${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
-}
-
-function collectStructuredSectionMarkdown(sectionEl) {
-  const section = getStructuredSectionConfig(sectionEl.dataset.profileSection || "");
-  if (section?.kind === "repeat") {
-    const blocks = [];
-    sectionEl.querySelectorAll("[data-structured-item]").forEach((itemEl, index) => {
-      const title = normalizePlainText(itemEl.querySelector("[data-item-title]")?.value || `${section.itemLabel || section.title} ${index + 1}`, 120);
-      const lines = collectStructuredFieldsFromScope(itemEl);
-      if (lines.length > 0) {
-        blocks.push([`### ${title}`, ...lines].join("\n"));
-      }
-    });
-    return blocks.join("\n\n");
+function collectProfileV2FromEditor() {
+  const profileV2 = createEmptyProfileV2();
+  if (!fields.profileSectionEditor) {
+    return profileV2;
   }
 
-  return collectStructuredFieldsFromScope(sectionEl).join("\n");
+  const customSections = [];
+  fields.profileSectionEditor.querySelectorAll("[data-profile-section]").forEach((sectionEl) => {
+    const key = sectionEl.dataset.profileSection || "";
+    const title = sectionEl.dataset.sectionTitle || "";
+    const config = getStructuredSectionConfig(key);
+    const isExtra = sectionEl.dataset.extraSection === "true";
+
+    if (config?.kind === "repeat") {
+      profileV2.sections[key] = {
+        key,
+        title: config.title,
+        kind: "repeat",
+        items: collectStructuredItems(sectionEl, config)
+      };
+      return;
+    }
+
+    const scopeData = collectStructuredFieldsFromScope(sectionEl);
+    const sectionData = {
+      key,
+      title: config?.title || title || "自定义资料",
+      kind: "simple",
+      values: scopeData.values,
+      custom: scopeData.custom
+    };
+
+    if (config && !isExtra) {
+      profileV2.sections[key] = sectionData;
+    } else if (hasSimpleSectionData(sectionData)) {
+      customSections.push(sectionData);
+    }
+  });
+
+  profileV2.customSections = customSections;
+  profileV2.updatedAt = new Date().toISOString();
+  return normalizeProfileV2(profileV2);
+}
+
+function collectStructuredItems(sectionEl, section) {
+  const items = [];
+  sectionEl.querySelectorAll("[data-structured-item]").forEach((itemEl, index) => {
+    const title = normalizePlainText(itemEl.querySelector("[data-item-title]")?.value || `${section.itemLabel || section.title} ${index + 1}`, 120);
+    const scopeData = collectStructuredFieldsFromScope(itemEl);
+    const item = {
+      title,
+      values: scopeData.values,
+      custom: scopeData.custom
+    };
+    if (hasStructuredItemData(item)) {
+      items.push(item);
+    }
+  });
+  return items;
 }
 
 function collectStructuredFieldsFromScope(scope) {
-  const lines = [];
+  const values = {};
+  const custom = [];
   scope.querySelectorAll("[data-field-label]").forEach((control) => {
     const label = control.dataset.fieldLabel || "";
     const value = String(control.value || "").trim();
     if (label && value) {
-      lines.push(`- ${label}：${value}`);
+      values[label] = value;
     }
   });
 
@@ -1599,11 +1615,169 @@ function collectStructuredFieldsFromScope(scope) {
     const label = normalizePlainText(row.querySelector("[data-custom-label]")?.value || "", 80);
     const value = String(row.querySelector("[data-custom-value]")?.value || "").trim();
     if (label && value) {
-      lines.push(`- ${label}：${value}`);
+      custom.push({ label, value });
     }
   });
 
-  return lines;
+  return { values, custom };
+}
+
+function hasSimpleSectionData(section) {
+  return Object.keys(section?.values || {}).length > 0 || (section?.custom || []).length > 0;
+}
+
+function hasStructuredItemData(item) {
+  return Object.keys(item?.values || {}).length > 0 || (item?.custom || []).length > 0;
+}
+
+function createEmptyProfileV2() {
+  const sections = {};
+  for (const section of STRUCTURED_RESUME_SECTIONS) {
+    sections[section.key] = section.kind === "repeat"
+      ? { key: section.key, title: section.title, kind: "repeat", items: [] }
+      : { key: section.key, title: section.title, kind: "simple", values: {}, custom: [] };
+  }
+
+  return {
+    schemaVersion: PROFILE_SCHEMA_VERSION,
+    updatedAt: "",
+    sections,
+    customSections: []
+  };
+}
+
+function normalizeProfileV2(profileV2) {
+  const normalized = createEmptyProfileV2();
+  const source = isPlainObject(profileV2) ? profileV2 : {};
+  const sourceSections = isPlainObject(source.sections) ? source.sections : {};
+
+  for (const config of STRUCTURED_RESUME_SECTIONS) {
+    const input = sourceSections[config.key];
+    normalized.sections[config.key] = normalizeProfileSectionData(config, input);
+  }
+
+  normalized.customSections = Array.isArray(source.customSections)
+    ? source.customSections
+        .map((section, index) => normalizeCustomProfileSection(section, index))
+        .filter(hasSimpleSectionData)
+    : [];
+  normalized.updatedAt = normalizePlainText(source.updatedAt || "", 80);
+  return normalized;
+}
+
+function normalizeProfileSectionData(config, input) {
+  if (config.kind === "repeat") {
+    return {
+      key: config.key,
+      title: config.title,
+      kind: "repeat",
+      items: Array.isArray(input?.items)
+        ? input.items.map(normalizeProfileItem).filter(hasStructuredItemData)
+        : []
+    };
+  }
+
+  return {
+    key: config.key,
+    title: config.title,
+    kind: "simple",
+    values: normalizeValuesObject(input?.values),
+    custom: normalizeCustomRows(input?.custom)
+  };
+}
+
+function normalizeProfileItem(item = {}) {
+  return {
+    title: normalizePlainText(item.title || "", 120),
+    values: normalizeValuesObject(item.values),
+    custom: normalizeCustomRows(item.custom)
+  };
+}
+
+function normalizeCustomProfileSection(section = {}, index = 0) {
+  return {
+    key: normalizePlainText(section.key || `extra-${index}`, 80),
+    title: normalizePlainText(section.title || "自定义资料", 120),
+    kind: "simple",
+    values: normalizeValuesObject(section.values),
+    custom: normalizeCustomRows(section.custom)
+  };
+}
+
+function normalizeValuesObject(values) {
+  const result = {};
+  if (!isPlainObject(values)) {
+    return result;
+  }
+
+  for (const [label, value] of Object.entries(values)) {
+    const cleanLabel = normalizePlainText(label, 120);
+    const cleanValue = String(value == null ? "" : value).trim();
+    if (cleanLabel && cleanValue) {
+      result[cleanLabel] = cleanValue;
+    }
+  }
+  return result;
+}
+
+function normalizeCustomRows(rows) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows
+    .map((row) => ({
+      label: normalizePlainText(row?.label || "", 80),
+      value: String(row?.value == null ? "" : row.value).trim()
+    }))
+    .filter((row) => row.label && row.value);
+}
+
+function getProfileV2FromSettings(settings) {
+  if (settings?.profileV2) {
+    return normalizeProfileV2(settings.profileV2);
+  }
+
+  if (typeof settings?.profileMarkdown === "string" && settings.profileMarkdown.trim()) {
+    return profileV2FromParsedMarkdown(settings.profileMarkdown);
+  }
+
+  if (settings?.profile) {
+    return profileV2FromParsedMarkdown(profileToMarkdown(settings.profile));
+  }
+
+  return createEmptyProfileV2();
+}
+
+function profileV2FromParsedMarkdown(markdown) {
+  const parsed = parseStructuredProfileMarkdown(markdown);
+  const profileV2 = createEmptyProfileV2();
+  for (const section of STRUCTURED_RESUME_SECTIONS) {
+    if (parsed.sections[section.key]) {
+      profileV2.sections[section.key] = {
+        ...normalizeProfileSectionData(section, parsed.sections[section.key]),
+        key: section.key,
+        title: section.title
+      };
+    }
+  }
+  profileV2.customSections = parsed.extraSections
+    .map((section, index) => normalizeCustomProfileSection({
+      key: `extra-${index}`,
+      title: section.title,
+      custom: section.custom?.length ? section.custom : parseKeyValueLines(section.body).custom
+    }, index))
+    .filter(hasSimpleSectionData);
+  return normalizeProfileV2(profileV2);
+}
+
+function createProfileBackup(profileV2) {
+  return {
+    format: PROFILE_BACKUP_FORMAT,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profileV2: normalizeProfileV2(profileV2)
+  };
 }
 
 function createEmptyProfile() {
@@ -1683,29 +1857,24 @@ function validateJsonObject(text, label) {
   }
 }
 
-function getProfileMarkdownFromSettings(settings) {
-  if (typeof settings?.profileMarkdown === "string" && settings.profileMarkdown.trim()) {
-    return settings.profileMarkdown;
-  }
-
-  return profileToMarkdown(settings?.profile || createEmptyProfile());
-}
-
 function parseImportedProfileBackup(text) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
     throw new Error("导入文件是空的。");
   }
 
-  if (/^[\[{]/.test(trimmed)) {
+  let parsed;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error("资料备份文件格式不正确，请选择从本插件导出的备份文件。");
+  }
+
+  if (!isPlainObject(parsed) || parsed.format !== PROFILE_BACKUP_FORMAT || !parsed.profileV2) {
     throw new Error("当前只支持导入 OpenJobAutofill 导出的资料备份文件。");
   }
 
-  if (!/(^|\n)##\s+/.test(trimmed) || !/(^|\n)-\s*[^：:]+[：:]/.test(trimmed)) {
-    throw new Error("导入文件不像 OpenJobAutofill 资料备份，请选择从本插件导出的资料文件。");
-  }
-
-  return text;
+  return normalizeProfileV2(parsed.profileV2);
 }
 
 function profileToMarkdown(profile) {

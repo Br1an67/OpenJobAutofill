@@ -25,6 +25,7 @@
   let assistantStateSaveTimer = null;
   let assistantStateRestored = false;
   let currentProfile = null;
+  let currentProfileV2 = null;
   let currentProfileMarkdown = "";
   let currentProfileLoadPromise = null;
   let currentSiteAdapter = null;
@@ -2561,9 +2562,10 @@
 
     currentProfileLoadPromise = (async () => {
       const settings = await sendRuntimeMessage({ type: "AI_RESUME_GET_SETTINGS" });
+      currentProfileV2 = settings.profileV2 || null;
       currentProfile = settings.profile || {};
       currentProfileMarkdown = settings.profileMarkdown || "";
-      return currentProfile;
+      return currentProfileV2 || currentProfile;
     })();
 
     try {
@@ -2778,6 +2780,155 @@
       .filter((section) => section.items.length > 0);
   }
 
+  function getCurrentProfileSections() {
+    const sections = profileV2ToCheatsheetSections(currentProfileV2);
+    if (sections.length > 0) {
+      return sections;
+    }
+    return parseMarkdownCheatsheet(currentProfileMarkdown);
+  }
+
+  function getCurrentProfileEntries() {
+    const entries = [];
+    for (const section of getCurrentProfileSections()) {
+      for (const item of section.items) {
+        const itemIndex = entries.length;
+        entries.push({
+          ...item,
+          itemId: item.itemId || `legacyProfile.items[${itemIndex}].value`,
+          category: section.category,
+          sectionKey: section.category,
+          aliases: item.aliases || buildProfileItemAliases(section, item)
+        });
+      }
+    }
+    return entries;
+  }
+
+  function hasCurrentProfileData() {
+    return getCurrentProfileSections().length > 0;
+  }
+
+  function profileV2ToCheatsheetSections(profileV2) {
+    if (!profileV2 || typeof profileV2 !== "object") {
+      return [];
+    }
+
+    const sections = [];
+    const sourceSections = profileV2.sections && typeof profileV2.sections === "object" ? profileV2.sections : {};
+    for (const [sectionKey, section] of Object.entries(sourceSections)) {
+      appendProfileV2Section(sections, sectionKey, section);
+    }
+    for (const [index, section] of (Array.isArray(profileV2.customSections) ? profileV2.customSections : []).entries()) {
+      appendProfileV2Section(sections, section.key || `custom-${index}`, section);
+    }
+
+    return sortCheatsheetSections(sections)
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.label)
+      }))
+      .filter((section) => section.items.length > 0);
+  }
+
+  function appendProfileV2Section(sections, sectionKey, section) {
+    if (!section || typeof section !== "object") {
+      return;
+    }
+
+    const category = normalizeCheatsheetCategory(section.title || sectionKey || "其他信息");
+    const target = ensureProfileV2CheatsheetSection(sections, category, section.title || category);
+    if (section.kind === "repeat") {
+      const items = Array.isArray(section.items) ? section.items : [];
+      items.forEach((item, itemIndex) => {
+        const subsection = normalizeText(item?.title || `${section.title || category} ${itemIndex + 1}`, 120);
+        appendProfileV2Values(target, item?.values, {
+          sectionKey,
+          subsection,
+          prefix: `profileV2.sections.${sectionKey}.items[${itemIndex}].values`
+        });
+        appendProfileV2CustomRows(target, item?.custom, {
+          sectionKey,
+          subsection,
+          prefix: `profileV2.sections.${sectionKey}.items[${itemIndex}].custom`
+        });
+      });
+      return;
+    }
+
+    appendProfileV2Values(target, section.values, {
+      sectionKey,
+      subsection: "",
+      prefix: `profileV2.sections.${sectionKey}.values`
+    });
+    appendProfileV2CustomRows(target, section.custom, {
+      sectionKey,
+      subsection: "",
+      prefix: `profileV2.sections.${sectionKey}.custom`
+    });
+  }
+
+  function ensureProfileV2CheatsheetSection(sections, category, sourceTitle) {
+    let section = sections.find((item) => item.category === category);
+    if (!section) {
+      section = { category, sourceTitles: [], items: [] };
+      sections.push(section);
+    }
+    if (sourceTitle && !section.sourceTitles.includes(sourceTitle)) {
+      section.sourceTitles.push(sourceTitle);
+    }
+    return section;
+  }
+
+  function appendProfileV2Values(section, values, context) {
+    if (!values || typeof values !== "object") {
+      return;
+    }
+    let index = 0;
+    for (const [label, value] of Object.entries(values)) {
+      appendProfileV2Entry(section, {
+        label,
+        value,
+        subsection: context.subsection,
+        itemId: `${context.prefix}[${index}]`
+      });
+      index += 1;
+    }
+  }
+
+  function appendProfileV2CustomRows(section, rows, context) {
+    if (!Array.isArray(rows)) {
+      return;
+    }
+    rows.forEach((row, index) => {
+      appendProfileV2Entry(section, {
+        label: row?.label || "",
+        value: row?.value || "",
+        subsection: context.subsection,
+        itemId: `${context.prefix}[${index}].value`
+      });
+    });
+  }
+
+  function appendProfileV2Entry(section, entry) {
+    const label = normalizeText(entry.label || "", 120);
+    const value = String(entry.value == null ? "" : entry.value).trim();
+    if (!label || !value) {
+      return;
+    }
+
+    const item = {
+      label,
+      value,
+      preview: formatQuickCopyValue(value, 96),
+      hasValue: true,
+      subsection: normalizeText(entry.subsection || "", 120),
+      itemId: entry.itemId || `profileV2.items[${section.items.length}].value`
+    };
+    item.aliases = buildProfileItemAliases(section, item);
+    section.items.push(item);
+  }
+
   function normalizeDraftKey(value) {
     return compactText(value)
       .replace(/[()（）[\]【】<>《》"'“”‘’、,，。．·•\s|:：/\\-]/g, "")
@@ -2880,23 +3031,7 @@
     return "";
   }
 
-  function normalizeMarkdownSections(markdown) {
-    const entries = [];
-    for (const section of parseMarkdownCheatsheet(markdown)) {
-      for (const item of section.items) {
-        entries.push({
-          ...item,
-          itemId: `markdownItems[${entries.length}].value`,
-          category: section.category,
-          sectionKey: section.category,
-          aliases: buildMarkdownItemAliases(section, item)
-        });
-      }
-    }
-    return entries;
-  }
-
-  function buildMarkdownItemAliases(section, item) {
+  function buildProfileItemAliases(section, item) {
     const aliases = new Set();
     const label = normalizeText(item?.label || "", 120);
     const subsection = normalizeText(item?.subsection || "", 120);
@@ -2924,7 +3059,7 @@
     return Array.from(aliases).filter(Boolean);
   }
 
-  function buildMarkdownProfileCatalog(entries) {
+  function buildProfileCatalogFromEntries(entries) {
     const sectionMap = new Map();
     const fields = entries
       .filter((entry) => entry?.itemId && entry?.label)
@@ -2953,7 +3088,7 @@
     };
   }
 
-  function getMarkdownEntryByPath(entries, path) {
+  function getProfileEntryByPath(entries, path) {
     if (!path) {
       return null;
     }
@@ -3674,7 +3809,7 @@
 
   function createAiAutofillCandidate(mapping, scan, entries) {
     const field = getScanFieldById(scan, mapping?.fieldId);
-    const entry = getMarkdownEntryByPath(entries, mapping?.sourcePath);
+    const entry = getProfileEntryByPath(entries, mapping?.sourcePath);
     if (!field || !entry?.hasValue) {
       return null;
     }
@@ -3760,7 +3895,7 @@
   }
 
   function buildAutofillDraft(scan) {
-    const entries = normalizeMarkdownSections(currentProfileMarkdown);
+    const entries = getCurrentProfileEntries();
     const visibleFields = Array.isArray(scan?.fields) ? scan.fields.filter((field) => field && field.canFill) : [];
     const fieldCounters = new Map();
     const fieldTotals = new Map();
@@ -3926,8 +4061,8 @@
   }
 
   async function enhanceDraftWithAi(scan, draft) {
-    const entries = Array.isArray(draft?.entries) ? draft.entries : normalizeMarkdownSections(currentProfileMarkdown);
-    const profileCatalog = buildMarkdownProfileCatalog(entries);
+    const entries = Array.isArray(draft?.entries) ? draft.entries : getCurrentProfileEntries();
+    const profileCatalog = buildProfileCatalogFromEntries(entries);
     if (profileCatalog.fields.length === 0) {
       return { draft, status: "本机资料目录为空，已使用本地规则。", usedAi: false };
     }
@@ -4795,7 +4930,7 @@
       return;
     }
 
-    if (!currentProfileMarkdown) {
+    if (!hasCurrentProfileData()) {
       const empty = document.createElement("div");
       empty.className = "arf-empty";
       empty.textContent = currentProfileLoadPromise
@@ -4806,7 +4941,7 @@
     }
 
     const filterText = compactText(sidebarFilter);
-    const allSections = parseMarkdownCheatsheet(currentProfileMarkdown);
+    const allSections = getCurrentProfileSections();
     const sections = allSections
       .map((group) => ({
         ...group,
@@ -4993,7 +5128,7 @@
   }
 
   async function copyActiveCategory() {
-    const section = parseMarkdownCheatsheet(currentProfileMarkdown).find((item) => item.category === activeCheatsheetCategory);
+    const section = getCurrentProfileSections().find((item) => item.category === activeCheatsheetCategory);
     if (!section) {
       setAssistantStatus("先点进一个分类，再复制本类内容。", true);
       return;
@@ -5033,7 +5168,7 @@
     const progressFill = panel.querySelector('[data-role="progress-fill"]');
     const progressStage = panel.querySelector('[data-role="progress-stage"]');
     const progressDetail = panel.querySelector('[data-role="progress-detail"]');
-    const sections = parseMarkdownCheatsheet(currentProfileMarkdown);
+    const sections = getCurrentProfileSections();
     const activeSection = sections.find((section) => section.category === activeCheatsheetCategory);
     const inProgress = Boolean(autofillInProgress || autofillProgress.active);
     if (activeCheatsheetCategory && !activeSection) {
@@ -5095,7 +5230,7 @@
     if (draftViewActive) {
       applyDraftSelectionSnapshot();
     }
-    if (!currentProfile && !currentProfileLoadPromise) {
+    if (!currentProfileV2 && !currentProfile && !currentProfileLoadPromise) {
       void refreshCurrentProfile();
     }
   }
@@ -5121,10 +5256,13 @@
 
   if (chrome?.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== "local" || (!changes.profile && !changes.profileMarkdown)) {
+      if (areaName !== "local" || (!changes.profileV2 && !changes.profile && !changes.profileMarkdown)) {
         return;
       }
 
+      if (changes.profileV2) {
+        currentProfileV2 = changes.profileV2.newValue || null;
+      }
       if (changes.profile) {
         currentProfile = changes.profile.newValue || {};
       }

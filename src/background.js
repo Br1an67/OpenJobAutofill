@@ -85,7 +85,16 @@ const DEFAULT_API_CONFIG = {
   customResponsePath: "choices.0.message.content"
 };
 
+const PROFILE_SCHEMA_VERSION = 2;
+const DEFAULT_PROFILE_V2 = {
+  schemaVersion: PROFILE_SCHEMA_VERSION,
+  updatedAt: "",
+  sections: {},
+  customSections: []
+};
+
 const STORAGE_KEYS = {
+  profileV2: "profileV2",
   profile: "profile",
   profileMarkdown: "profileMarkdown",
   apiConfig: "apiConfig"
@@ -197,22 +206,17 @@ const DECLARATION_FIELD_DEFS = [
   ["overseasResidency", "是否享有境外长期或永久居留权", "境外居留权"]
 ];
 
-const DEFAULT_PROFILE_MARKDOWN = profileToMarkdown(DEFAULT_PROFILE);
-
 chrome.runtime.onInstalled.addListener(async () => {
   const existing = await chrome.storage.local.get([
+    STORAGE_KEYS.profileV2,
     STORAGE_KEYS.profile,
     STORAGE_KEYS.profileMarkdown,
     STORAGE_KEYS.apiConfig
   ]);
   const next = {};
 
-  if (!existing[STORAGE_KEYS.profile]) {
-    next[STORAGE_KEYS.profile] = DEFAULT_PROFILE;
-  }
-
-  if (!existing[STORAGE_KEYS.profileMarkdown]) {
-    next[STORAGE_KEYS.profileMarkdown] = profileToMarkdown(existing[STORAGE_KEYS.profile] || DEFAULT_PROFILE);
+  if (!existing[STORAGE_KEYS.profileV2] && !existing[STORAGE_KEYS.profileMarkdown] && !existing[STORAGE_KEYS.profile]) {
+    next[STORAGE_KEYS.profileV2] = DEFAULT_PROFILE_V2;
   }
 
   if (!existing[STORAGE_KEYS.apiConfig]) {
@@ -272,18 +276,20 @@ async function handleMessage(message) {
 
 async function getSettings() {
   const values = await chrome.storage.local.get([
+    STORAGE_KEYS.profileV2,
     STORAGE_KEYS.profile,
     STORAGE_KEYS.profileMarkdown,
     STORAGE_KEYS.apiConfig
   ]);
   const profile = values[STORAGE_KEYS.profile] || DEFAULT_PROFILE;
   return {
+    profileV2: values[STORAGE_KEYS.profileV2] ? normalizeProfileV2(values[STORAGE_KEYS.profileV2]) : null,
     profile,
-    profileMarkdown: values[STORAGE_KEYS.profileMarkdown] || profileToMarkdown(profile),
+    profileMarkdown: values[STORAGE_KEYS.profileMarkdown] || "",
     apiConfig: { ...DEFAULT_API_CONFIG, ...(values[STORAGE_KEYS.apiConfig] || {}) },
     defaults: {
+      profileV2: DEFAULT_PROFILE_V2,
       profile: DEFAULT_PROFILE,
-      profileMarkdown: DEFAULT_PROFILE_MARKDOWN,
       apiConfig: DEFAULT_API_CONFIG
     }
   };
@@ -296,6 +302,10 @@ async function saveSettings(payload) {
     next[STORAGE_KEYS.profile] = payload.profile;
   }
 
+  if (payload.profileV2) {
+    next[STORAGE_KEYS.profileV2] = normalizeProfileV2(payload.profileV2);
+  }
+
   if (typeof payload.profileMarkdown === "string") {
     next[STORAGE_KEYS.profileMarkdown] = payload.profileMarkdown;
   }
@@ -305,11 +315,14 @@ async function saveSettings(payload) {
   }
 
   await chrome.storage.local.set(next);
+  if (payload.profileV2) {
+    await chrome.storage.local.remove([STORAGE_KEYS.profile, STORAGE_KEYS.profileMarkdown]);
+  }
   return { saved: Object.keys(next) };
 }
 
 async function clearSettings() {
-  await chrome.storage.local.remove([STORAGE_KEYS.profile, STORAGE_KEYS.profileMarkdown, STORAGE_KEYS.apiConfig]);
+  await chrome.storage.local.remove([STORAGE_KEYS.profileV2, STORAGE_KEYS.profile, STORAGE_KEYS.profileMarkdown, STORAGE_KEYS.apiConfig]);
   return { cleared: true };
 }
 
@@ -625,6 +638,98 @@ function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
 }
 
+function normalizeProfileV2(profileV2) {
+  if (!isPlainObject(profileV2)) {
+    return DEFAULT_PROFILE_V2;
+  }
+
+  const sections = isPlainObject(profileV2.sections) ? profileV2.sections : {};
+  const normalizedSections = {};
+  for (const [key, section] of Object.entries(sections)) {
+    if (!isPlainObject(section)) {
+      continue;
+    }
+    const cleanKey = sanitizeAttributeText(key || section.key || "");
+    const title = sanitizePromptText(section.title || cleanKey, 120);
+    if (!cleanKey || !title) {
+      continue;
+    }
+
+    normalizedSections[cleanKey] = section.kind === "repeat"
+      ? {
+          key: cleanKey,
+          title,
+          kind: "repeat",
+          items: Array.isArray(section.items)
+            ? section.items.map(normalizeProfileV2Item).filter((item) => Object.keys(item.values).length > 0 || item.custom.length > 0)
+            : []
+        }
+      : {
+          key: cleanKey,
+          title,
+          kind: "simple",
+          values: normalizeProfileV2Values(section.values),
+          custom: normalizeProfileV2CustomRows(section.custom)
+        };
+  }
+
+  return {
+    schemaVersion: PROFILE_SCHEMA_VERSION,
+    updatedAt: sanitizePromptText(profileV2.updatedAt || "", 80),
+    sections: normalizedSections,
+    customSections: Array.isArray(profileV2.customSections)
+      ? profileV2.customSections.map(normalizeProfileV2CustomSection).filter((section) => Object.keys(section.values).length > 0 || section.custom.length > 0)
+      : []
+  };
+}
+
+function normalizeProfileV2Item(item = {}) {
+  return {
+    title: sanitizePromptText(item.title || "", 120),
+    values: normalizeProfileV2Values(item.values),
+    custom: normalizeProfileV2CustomRows(item.custom)
+  };
+}
+
+function normalizeProfileV2CustomSection(section = {}) {
+  return {
+    key: sanitizeAttributeText(section.key || "custom"),
+    title: sanitizePromptText(section.title || "自定义资料", 120),
+    kind: "simple",
+    values: normalizeProfileV2Values(section.values),
+    custom: normalizeProfileV2CustomRows(section.custom)
+  };
+}
+
+function normalizeProfileV2Values(values) {
+  const normalized = {};
+  if (!isPlainObject(values)) {
+    return normalized;
+  }
+
+  for (const [label, value] of Object.entries(values)) {
+    const cleanLabel = sanitizePromptText(label, 120);
+    const cleanValue = String(value == null ? "" : value).trim();
+    if (cleanLabel && cleanValue) {
+      normalized[cleanLabel] = cleanValue;
+    }
+  }
+  return normalized;
+}
+
+function normalizeProfileV2CustomRows(rows) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows
+    .map((row) => ({
+      label: sanitizePromptText(row?.label || "", 80),
+      value: String(row?.value == null ? "" : row.value).trim()
+    }))
+    .filter((row) => row.label && row.value);
+}
+
 function redactPersonalValues(text, maxLength = 220) {
   if (!text) {
     return "";
@@ -769,124 +874,6 @@ function addCustomProfileFields(catalog, customFields) {
   }
 }
 
-function profileToMarkdown(profile) {
-  const source = isPlainObject(profile) ? profile : {};
-  const lines = [
-    "# OpenJobAutofill Resume Profile",
-    "",
-    "> 本文件只保存在本机。按 `## 大类` 和 `- 字段：值` 追加内容，侧边栏会自动按大类展示。",
-    ""
-  ];
-
-  addMarkdownSimpleSection(lines, "基本信息", source.basic || {}, BASIC_FIELD_DEFS);
-  addMarkdownRepeatedSection(lines, "教育经历", source.education, EDUCATION_FIELD_DEFS, "教育经历");
-  const splitExperience = splitMarkdownExperienceItems(source.experiences);
-  addMarkdownRepeatedSection(lines, "实习经历", splitExperience.internships, EXPERIENCE_FIELD_DEFS, "实习经历");
-  addMarkdownRepeatedSection(lines, "项目经历", splitExperience.projects, EXPERIENCE_FIELD_DEFS, "项目经历");
-  addMarkdownRepeatedSection(lines, "社团工作", source.campus, CAMPUS_FIELD_DEFS, "社团工作");
-  addMarkdownFamilySection(lines, source.family || {});
-  addMarkdownRepeatedSection(lines, "证书技能", source.certificates, CERTIFICATE_FIELD_DEFS, "证书");
-  addMarkdownRepeatedSection(lines, "奖惩情况", source.awards, AWARD_FIELD_DEFS, "奖惩");
-  addMarkdownSimpleSection(lines, "其他信息", source.other || {}, OTHER_FIELD_DEFS);
-  addMarkdownSimpleSection(lines, "有关声明", source.declarations || {}, DECLARATION_FIELD_DEFS);
-  addMarkdownCustomFields(lines, source.customFields);
-
-  return `${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
-}
-
-function addMarkdownSimpleSection(lines, title, data, defs) {
-  lines.push(`## ${title}`);
-  for (const [key, label] of defs) {
-    lines.push(`- ${label}：${formatMarkdownValue(data?.[key])}`);
-  }
-  lines.push("");
-}
-
-function addMarkdownRepeatedSection(lines, title, items, defs, itemLabel) {
-  lines.push(`## ${title}`);
-  const list = Array.isArray(items) && items.length > 0 ? items : [{}];
-  list.forEach((item, index) => {
-    if (list.length > 1 || !isEmptyMarkdownObject(item)) {
-      lines.push(`### ${itemLabel} ${index + 1}`);
-    }
-    for (const [key, label] of defs) {
-      lines.push(`- ${label}：${formatMarkdownValue(item?.[key])}`);
-    }
-    lines.push("");
-  });
-}
-
-function addMarkdownFamilySection(lines, family) {
-  lines.push("## 家庭信息");
-  for (const [key, title] of [
-    ["father", "父亲"],
-    ["mother", "母亲"]
-  ]) {
-    lines.push(`### ${title}`);
-    const member = family?.[key] || {};
-    for (const [fieldKey, label] of FAMILY_FIELD_DEFS) {
-      lines.push(`- ${label}：${formatMarkdownValue(member[fieldKey])}`);
-    }
-    lines.push("");
-  }
-}
-
-function splitMarkdownExperienceItems(items) {
-  const list = Array.isArray(items) ? items : [];
-  const projects = [];
-  const internships = [];
-
-  for (const item of list) {
-    const organization = String(item?.organization || "");
-    const role = String(item?.role || "");
-    const looksLikeProject = /项目|作品|系统|平台|Agent|RAG|后台|助手/i.test(`${organization} ${role}`);
-    if (looksLikeProject && !/公司|集团|科技|有限|中心|研究院|事务所|工作室|实验室/.test(organization)) {
-      projects.push(item);
-    } else {
-      internships.push(item);
-    }
-  }
-
-  return { internships, projects };
-}
-
-function addMarkdownCustomFields(lines, customFields) {
-  const basicFields = Array.isArray(customFields?.basic) ? customFields.basic : [];
-  if (basicFields.length === 0) {
-    return;
-  }
-
-  lines.push("## 自定义资料");
-  for (const item of basicFields) {
-    const label = item?.label || item?.key || "自定义字段";
-    lines.push(`- ${label}：${formatMarkdownValue(item?.value)}`);
-    if (item?.note) {
-      lines.push(`  备注：${formatMarkdownValue(item.note)}`);
-    }
-  }
-  lines.push("");
-}
-
-function formatMarkdownValue(value) {
-  if (value == null) {
-    return "";
-  }
-
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-
-  return String(value).replace(/\s*\n+\s*/g, " ").trim();
-}
-
-function isEmptyMarkdownObject(value) {
-  if (!isPlainObject(value)) {
-    return true;
-  }
-
-  return Object.values(value).every((child) => child == null || String(child).trim() === "");
-}
-
 function buildMessages(profileCatalog, scan) {
   const systemPrompt = [
     "You are a form-field mapping engine for job application forms.",
@@ -908,7 +895,7 @@ function buildMessages(profileCatalog, scan) {
         mappings: [
           {
             fieldId: "field id from fields list",
-            sourcePath: "path.in.profile, for example basic.name or education[0].school",
+            sourcePath: "exact path from local profile field catalog",
             value: "optional non-personal literal only when sourcePath is not enough",
             confidence: 0.95,
             reason: "short reason"
@@ -925,7 +912,7 @@ function buildMessages(profileCatalog, scan) {
     "- Set confidence from 0 to 1.",
     "- Required fields deserve careful mapping, but uncertainty must lower confidence.",
     "- For repeated sections like family father/mother or education entries, use section and nearbyText to select the right profile path.",
-    "- For Chinese recruitment forms, common mappings include 姓名 -> basic.name, 手机号码 -> basic.phone, 电子邮箱 -> basic.email, 毕业院校 -> education[0].school, 证书名称 -> certificates[0].name, 特长爱好类别 -> other.hobbyCategory, 特长爱好具体内容 -> other.hobbyDetail.",
+    "- For Chinese recruitment forms, common mappings include 姓名 -> 姓名, 手机号码 -> 手机号码/电话, 电子邮箱 -> 邮箱/电子邮箱, 毕业院校 -> 学校/毕业院校, 证书名称 -> 证书名称（技能名称）.",
     "- For user-defined fields, inspect customFields.* items by label and key. If a custom field matches, use sourcePath like customFields.basic[0].value.",
     "- For declarations asking yes/no questions, use declarations.* only if the question meaning clearly matches.",
     "- Do not output copied page values, existing field values, names, phone numbers, email addresses, ID numbers, schools, employers, addresses, or experience descriptions.",
