@@ -614,6 +614,8 @@ const PROFILE_SECTIONS = [
 
 let defaults = null;
 let profileState = null;
+let activeProfileSectionKey = "";
+let profileSectionSyncFrame = 0;
 
 document.getElementById("settingsForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -644,6 +646,8 @@ fields.profileEditor.addEventListener("click", handleProfileEditorClick);
 fields.profileSectionEditor.addEventListener("input", syncProfileMarkdownFromSections);
 fields.profileSectionEditor.addEventListener("focusin", handleProfileSectionFocus);
 fields.profileSectionEditor.addEventListener("click", handleStructuredProfileClick);
+window.addEventListener("scroll", scheduleProfileSectionSync, { passive: true });
+window.addEventListener("resize", scheduleProfileSectionSync);
 
 loadSettings();
 
@@ -657,6 +661,7 @@ async function loadSettings() {
     renderProfileNav();
     renderProfileTips(RESUME_SECTION_GUIDE[0]?.key);
     renderMarkdownSectionEditor(fields.profileMarkdown.value);
+    scheduleProfileSectionSync();
     updateModeBlocks();
     setStatus("设置已加载。");
     await maybeAutoRefreshModelList({ silent: true });
@@ -1031,7 +1036,8 @@ function renderProfileNav() {
 
   fields.profileNav.querySelectorAll("[data-profile-nav]").forEach((link) => {
     link.addEventListener("click", () => {
-      renderProfileTips(link.dataset.profileNav);
+      setActiveProfileSection(link.dataset.profileNav || "", { force: true });
+      window.setTimeout(scheduleProfileSectionSync, 80);
     });
   });
 }
@@ -1041,7 +1047,13 @@ function renderProfileTips(activeKey = "") {
     return;
   }
 
-  const activeSection = RESUME_SECTION_GUIDE.find((section) => section.key === activeKey) || RESUME_SECTION_GUIDE[0];
+  const guideSection = RESUME_SECTION_GUIDE.find((section) => section.key === activeKey);
+  const domSection = fields.profileSectionEditor?.querySelector(`[data-profile-section="${CSS.escape(activeKey || "")}"]`);
+  const activeSection = guideSection || {
+    key: activeKey || RESUME_SECTION_GUIDE[0]?.key,
+    title: domSection?.dataset.sectionTitle || RESUME_SECTION_GUIDE[0]?.title || "基本信息",
+    tips: ["这是自定义模块，保存时会继续保留。"]
+  };
   const globalTips = [
     "像网申页面一样直接填字段；保存时会在后台转换成 Markdown。",
     "同一个值如果不同网站叫法不同，可以点“添加自定义字段”补充别名。",
@@ -1052,7 +1064,7 @@ function renderProfileTips(activeKey = "") {
   fields.profileTips.innerHTML = `
     <article class="tip-card">
       <div class="tip-kicker">当前模块</div>
-      <h3>${escapeHtml(activeSection?.title || "基本信息")}</h3>
+      <h3>${escapeHtml(activeSection.title || "基本信息")}</h3>
       ${(activeSection?.tips || []).map((tip) => `<p>${escapeHtml(tip)}</p>`).join("")}
     </article>
     <article class="tip-card">
@@ -1062,8 +1074,61 @@ function renderProfileTips(activeKey = "") {
   `;
 
   fields.profileNav?.querySelectorAll("[data-profile-nav]").forEach((link) => {
-    link.classList.toggle("active", link.dataset.profileNav === activeSection?.key);
+    link.classList.toggle("active", link.dataset.profileNav === activeSection.key);
   });
+}
+
+function setActiveProfileSection(sectionKey, options = {}) {
+  if (!sectionKey) {
+    return;
+  }
+  if (!options.force && activeProfileSectionKey === sectionKey) {
+    return;
+  }
+
+  activeProfileSectionKey = sectionKey;
+  renderProfileTips(sectionKey);
+}
+
+function scheduleProfileSectionSync() {
+  if (profileSectionSyncFrame) {
+    return;
+  }
+
+  profileSectionSyncFrame = window.requestAnimationFrame(() => {
+    profileSectionSyncFrame = 0;
+    syncActiveProfileSectionFromScroll();
+  });
+}
+
+function syncActiveProfileSectionFromScroll() {
+  if (!fields.profileSectionEditor) {
+    return;
+  }
+
+  const sections = Array.from(fields.profileSectionEditor.querySelectorAll("[data-profile-section]"));
+  if (sections.length === 0) {
+    return;
+  }
+
+  const anchorY = Math.min(Math.max(window.innerHeight * 0.26, 120), 220);
+  let activeSection = sections[0];
+  let activeScore = Number.POSITIVE_INFINITY;
+
+  for (const section of sections) {
+    const rect = section.getBoundingClientRect();
+    if (rect.bottom < 80) {
+      continue;
+    }
+
+    const distance = rect.top <= anchorY ? Math.abs(rect.top - anchorY) * 0.35 : Math.abs(rect.top - anchorY);
+    if (distance < activeScore) {
+      activeScore = distance;
+      activeSection = section;
+    }
+  }
+
+  setActiveProfileSection(activeSection.dataset.profileSection || "");
 }
 
 function handleProfileSectionFocus(event) {
@@ -1071,7 +1136,7 @@ function handleProfileSectionFocus(event) {
   if (!card) {
     return;
   }
-  renderProfileTips(card.dataset.profileSection);
+  setActiveProfileSection(card.dataset.profileSection || "", { force: true });
 }
 
 function handleStructuredProfileClick(event) {
@@ -1151,6 +1216,7 @@ function renderMarkdownSectionEditor(markdown) {
     .join("");
 
   fields.profileSectionEditor.innerHTML = known + extras;
+  scheduleProfileSectionSync();
 }
 
 function renderStructuredSection(section, data = null) {
