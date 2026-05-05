@@ -638,7 +638,7 @@ async function exportProfile() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `openjobautofill-profile-${new Date().toISOString().slice(0, 10)}.ojaf.json`;
+    anchor.download = `openjobautofill-profile-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
