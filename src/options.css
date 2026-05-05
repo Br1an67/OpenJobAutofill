@@ -445,11 +445,6 @@ select:focus {
   display: none;
 }
 
-.profile-editor {
-  display: grid;
-  gap: 18px;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -516,122 +511,6 @@ button.danger {
   color: var(--red);
 }
 
-.section {
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.46);
-}
-
-.section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.subsection-head {
-  margin-bottom: 10px;
-}
-
-.section-title {
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.section-note {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.field-grid.cols-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.field-grid.cols-1 {
-  grid-template-columns: 1fr;
-}
-
-.field {
-  display: grid;
-  gap: 6px;
-}
-
-.field-label {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.field-label.required::after {
-  margin-left: 4px;
-  color: var(--red);
-  content: "*";
-}
-
-.custom-fields {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--line);
-}
-
-.custom-field-card {
-  background: rgba(255, 253, 248, 0.82);
-}
-
-.repeater {
-  display: grid;
-  gap: 12px;
-}
-
-.repeater-card {
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.repeater-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.repeater-card-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.inline-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.inline-actions button {
-  width: auto;
-  min-height: 32px;
-  padding: 0 12px;
-}
-
-.empty-note {
-  padding: 10px 12px;
-  border: 1px dashed var(--line);
-  border-radius: 12px;
-  color: var(--muted);
-  font-size: 12px;
-  background: rgba(255, 255, 255, 0.5);
-}
-
 button:hover {
   filter: brightness(0.97);
 }
@@ -693,7 +572,4 @@ pre.error {
     grid-template-columns: 1fr;
   }
 
-  .profile-editor {
-    gap: 14px;
-  }
 }
