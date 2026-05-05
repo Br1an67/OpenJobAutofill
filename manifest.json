@@ -3,6 +3,7 @@
   "name": "OpenJobAutofill",
   "version": "0.7.8",
   "description": "Local Markdown resume helper with privacy-first AI page analysis and draft-assisted form filling.",
+  "homepage_url": "https://github.com/Br1an67/OpenJobAutofill",
   "permissions": [
     "activeTab",
     "scripting",
