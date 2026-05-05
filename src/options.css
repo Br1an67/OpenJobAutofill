@@ -83,7 +83,7 @@ h2 {
 
 .resume-workbench {
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr) 260px;
+  grid-template-columns: 214px minmax(0, 1fr) 260px;
   align-items: start;
   gap: 18px;
 }
@@ -100,7 +100,9 @@ h2 {
   position: sticky;
   top: 18px;
   max-height: calc(100vh - 36px);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 .side-title {
@@ -118,11 +120,12 @@ h2 {
 }
 
 .resume-nav-list a {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 9px 10px;
+  width: 100%;
+  padding: 9px 8px 9px 10px;
   border: 1px solid transparent;
   border-radius: 12px;
   color: var(--muted);
@@ -139,8 +142,8 @@ h2 {
 
 .completion-badge {
   flex: none;
-  min-width: 44px;
-  padding: 2px 7px;
+  min-width: 48px;
+  padding: 2px 6px;
   border-radius: 999px;
   background: rgba(113, 107, 95, 0.1);
   color: var(--muted);
