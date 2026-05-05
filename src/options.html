@@ -11,8 +11,8 @@
       <header class="hero">
         <div>
           <p class="eyebrow">OpenJobAutofill</p>
-          <h1>维护本机 Markdown 简历资料</h1>
-          <p class="hint">数据只保存在本机的 <code>chrome.storage.local</code>，不会走同步云端。AI 只分析页面结构和本地资料字段目录，不会读取你的简历值。侧边栏会显示本机 Markdown 资料，也可以先生成填充草稿，再把你勾选的项目写入当前网页。</p>
+          <h1>维护本机简历资料</h1>
+          <p class="hint">数据只保存在本机的 <code>chrome.storage.local</code>，不会走同步云端。AI 只分析页面结构和本地资料字段目录，不会读取你的简历值。侧边栏会显示本机资料，也可以先生成填充草稿，再把你勾选的项目写入当前网页。</p>
         </div>
       </header>
 
@@ -26,19 +26,19 @@
           <div class="profile-card-head">
             <div>
               <h2>简历资料</h2>
-              <p class="hint">最终仍保存为 Markdown。这里按通用网申栏目拆开填写，保存时会自动合成完整简历资料。</p>
+              <p class="hint">这里按通用网申栏目拆开填写，保存时会自动整理成 OpenJobAutofill 的本机资料备份格式。</p>
             </div>
           </div>
           <textarea id="profileMarkdown" class="profile-markdown-source" spellcheck="false" hidden></textarea>
           <div id="profileSectionEditor" class="profile-section-editor"></div>
           <div class="actions profile-actions">
             <button id="saveProfile" type="button">保存资料</button>
-            <button id="exportProfile" class="secondary" type="button">导出 Markdown</button>
-            <button id="importProfile" class="secondary" type="button">导入 Markdown / JSON</button>
+            <button id="exportProfile" class="secondary" type="button">导出资料备份</button>
+            <button id="importProfile" class="secondary" type="button">导入资料备份</button>
             <button id="resetProfile" class="ghost" type="button">恢复模板</button>
             <button id="clearLocalData" class="ghost danger" type="button">清空本地数据</button>
           </div>
-          <input id="profileFileInput" type="file" accept="text/markdown,text/plain,application/json,.md,.markdown,.txt,.json" hidden />
+          <input id="profileFileInput" type="file" accept="text/markdown,text/plain,.md,.markdown,.txt" hidden />
         </section>
 
         <aside class="resume-tips card">

@@ -2404,7 +2404,7 @@
     const subtitle = document.createElement("div");
     subtitle.className = "arf-subtitle";
     subtitle.dataset.role = "subtitle";
-    subtitle.textContent = "本机 Markdown 简历资料。可生成填充草稿，确认后只把选中项写入当前网页。";
+    subtitle.textContent = "本机简历资料。可生成填充草稿，确认后只把选中项写入当前网页。";
     titleWrap.append(title, subtitle);
 
     const headerActions = document.createElement("div");
@@ -2572,7 +2572,7 @@
         renderAssistantPanel();
       }
       if (options.force && assistantVisible) {
-        setAssistantStatus("已刷新本机 Markdown 简历资料。");
+        setAssistantStatus("已刷新本机简历资料。");
       }
       return profile;
     } catch (error) {
@@ -3929,7 +3929,7 @@
     const entries = Array.isArray(draft?.entries) ? draft.entries : normalizeMarkdownSections(currentProfileMarkdown);
     const profileCatalog = buildMarkdownProfileCatalog(entries);
     if (profileCatalog.fields.length === 0) {
-      return { draft, status: "Markdown 资料目录为空，已使用本地规则。", usedAi: false };
+      return { draft, status: "本机资料目录为空，已使用本地规则。", usedAi: false };
     }
 
     setAutofillProgress("AI 生成映射", 76, "只发送字段目录，不发送资料值");
@@ -4032,7 +4032,7 @@
     }
 
     try {
-      setAutofillProgress("读取本机资料", 8, "正在加载 Markdown 简历资料");
+      setAutofillProgress("读取本机资料", 8, "正在加载本机简历资料");
       await refreshCurrentProfile({ force: true });
       setAutofillProgress("扫描当前页面", 24, "展开可编辑区域并提取字段");
       setAssistantStatus("正在扫描当前页面并生成本地填充草稿...");
@@ -4244,7 +4244,7 @@
     if (draft.candidates.length === 0) {
       const empty = document.createElement("div");
       empty.className = "arf-empty";
-      empty.textContent = "没有匹配到可写入项。可以返回资料分类，或者检查本地 Markdown 是否包含对应字段。";
+      empty.textContent = "没有匹配到可写入项。可以返回资料分类，或者检查本机资料是否包含对应字段。";
       head.append(empty);
       root.append(head);
       return;
@@ -4799,8 +4799,8 @@
       const empty = document.createElement("div");
       empty.className = "arf-empty";
       empty.textContent = currentProfileLoadPromise
-        ? "正在读取本机 Markdown 简历资料..."
-        : "点击“设置”后先保存 Markdown 资料，这里会显示可参考和复制的内容。";
+        ? "正在读取本机简历资料..."
+        : "点击“设置”后先保存简历资料，这里会显示可参考和复制的内容。";
       list.append(empty);
       return;
     }
@@ -4821,7 +4821,7 @@
     if (sections.length === 0) {
       const empty = document.createElement("div");
       empty.className = "arf-empty";
-      empty.textContent = sidebarFilter ? "没有匹配的资料项。" : "Markdown 里还没有 `- 字段：值` 形式的内容。";
+      empty.textContent = sidebarFilter ? "没有匹配的资料项。" : "资料里还没有可展示的字段内容。";
       list.append(empty);
       return;
     }

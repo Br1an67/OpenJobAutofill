@@ -639,7 +639,7 @@ async function saveProfile() {
       payload: { profileMarkdown }
     });
     setStatus("简历资料保存成功，已写入本机的 chrome.storage.local。");
-    setInlineFeedback("Markdown 简历资料已保存到本机。");
+    setInlineFeedback("简历资料已保存到本机。");
   } catch (error) {
     setStatus(`保存资料失败：${error.message}`, true);
     setInlineFeedback(`保存资料失败：${error.message}`, true);
@@ -661,7 +661,7 @@ async function exportProfile() {
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setStatus("已导出本地资料 Markdown。");
+    setStatus("已导出本地资料备份。");
   } catch (error) {
     setStatus(`导出失败：${error.message}`, true);
   }
@@ -675,15 +675,15 @@ async function importProfileFromFile() {
 
   try {
     const text = await file.text();
-    const imported = parseImportedProfileText(text, file.name);
-    fields.profileMarkdown.value = imported.profileMarkdown;
+    const profileMarkdown = parseImportedProfileBackup(text);
+    fields.profileMarkdown.value = profileMarkdown;
     renderMarkdownSectionEditor(fields.profileMarkdown.value);
     await sendRuntimeMessage({
       type: "AI_RESUME_SAVE_SETTINGS",
-      payload: imported.profile ? { profile: imported.profile, profileMarkdown: imported.profileMarkdown } : { profileMarkdown: imported.profileMarkdown }
+      payload: { profileMarkdown }
     });
-    setStatus("已导入并保存到本机。侧边栏会立即读取这份 Markdown 简历资料。");
-    setInlineFeedback(imported.profile ? "旧 JSON 已转换为 Markdown 并保存。" : "Markdown 简历资料已保存到本机。");
+    setStatus("已导入并保存到本机。侧边栏会立即读取这份简历资料。");
+    setInlineFeedback("简历资料已保存到本机。");
   } catch (error) {
     setStatus(`导入失败：${error.message}`, true);
     setInlineFeedback(`导入失败：${error.message}`, true);
@@ -693,7 +693,7 @@ async function importProfileFromFile() {
 }
 
 function resetProfile() {
-  const confirmed = window.confirm("这会用 Markdown 模板覆盖当前资料编辑区，是否继续？");
+  const confirmed = window.confirm("这会用空白模板覆盖当前资料编辑区，是否继续？");
   if (!confirmed) {
     return;
   }
@@ -988,7 +988,7 @@ function renderProfileTips(activeKey = "") {
     tips: ["这是自定义模块，保存时会继续保留。"]
   };
   const globalTips = [
-    "像网申页面一样直接填字段；保存时会在后台转换成 Markdown。",
+    "像网申页面一样直接填字段；保存时会在后台整理成本机资料备份。",
     "同一个值如果不同网站叫法不同，可以点“添加自定义字段”补充别名。",
     "没有的经历可以留空；经历类模块可以添加多条。",
     "资料只保存在本机 chrome.storage.local，不会同步到云端。",
@@ -1552,7 +1552,7 @@ function collectMarkdownFromSectionEditor() {
   const lines = [
     "# OpenJobAutofill Resume Profile",
     "",
-    "> 本文件只保存在本机。设置页用结构化表单填写，保存时自动转换为 Markdown，侧边栏和一键填写都会读取这份内容。",
+    "> 本文件只保存在本机。设置页用结构化表单填写，侧边栏和一键填写都会读取这份内容。",
     ""
   ];
 
@@ -1683,20 +1683,6 @@ function validateJsonObject(text, label) {
   }
 }
 
-function extractProfileFromImportedData(parsed) {
-  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-    if (parsed.profile && typeof parsed.profile === "object") {
-      return parsed.profile;
-    }
-
-    if (parsed.basic || parsed.education || parsed.family || parsed.declarations || parsed.customFields) {
-      return parsed;
-    }
-  }
-
-  throw new Error("导入文件必须是资料对象，或包含 profile 字段的 JSON。");
-}
-
 function getProfileMarkdownFromSettings(settings) {
   if (typeof settings?.profileMarkdown === "string" && settings.profileMarkdown.trim()) {
     return settings.profileMarkdown;
@@ -1705,27 +1691,21 @@ function getProfileMarkdownFromSettings(settings) {
   return profileToMarkdown(settings?.profile || createEmptyProfile());
 }
 
-function parseImportedProfileText(text, fileName = "") {
+function parseImportedProfileBackup(text) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
     throw new Error("导入文件是空的。");
   }
 
-  const looksLikeJson = /\.json$/i.test(fileName) || /^[\[{]/.test(trimmed);
-  if (looksLikeJson) {
-    const parsed = JSON.parse(trimmed);
-    if (typeof parsed.profileMarkdown === "string") {
-      return { profileMarkdown: parsed.profileMarkdown };
-    }
-
-    const profile = extractProfileFromImportedData(parsed);
-    return {
-      profile,
-      profileMarkdown: profileToMarkdown(profile)
-    };
+  if (/^[\[{]/.test(trimmed)) {
+    throw new Error("当前只支持导入 OpenJobAutofill 导出的资料备份文件。");
   }
 
-  return { profileMarkdown: text };
+  if (!/(^|\n)##\s+/.test(trimmed) || !/(^|\n)-\s*[^：:]+[：:]/.test(trimmed)) {
+    throw new Error("导入文件不像 OpenJobAutofill 资料备份，请选择从本插件导出的资料文件。");
+  }
+
+  return text;
 }
 
 function profileToMarkdown(profile) {
