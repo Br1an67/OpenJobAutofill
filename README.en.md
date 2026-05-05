@@ -102,6 +102,8 @@ If you run into a problem, want support for a specific recruiting website, or ha
 
 You can also check my GitHub profile for a public email address.
 
+Community link: [LINUX DO](https://linux.do) - A Chinese community for tech enthusiasts. This project links to and recognizes LINUX DO for discussion and feedback.
+
 ## License
 
 OpenJobAutofill is open-sourced under the MIT License. See [LICENSE](LICENSE) for details.
