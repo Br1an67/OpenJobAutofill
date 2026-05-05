@@ -408,7 +408,6 @@ const STRUCTURED_RESUME_SECTIONS = [
   }
 ];
 
-let defaults = null;
 let activeProfileSectionKey = "";
 let profileSectionSyncFrame = 0;
 
@@ -448,7 +447,6 @@ loadSettings();
 async function loadSettings() {
   try {
     const settings = await sendRuntimeMessage({ type: "AI_RESUME_GET_SETTINGS" });
-    defaults = settings.defaults;
     applyApiConfig(settings.apiConfig);
     renderProfileNav();
     renderProfileTips(RESUME_SECTION_GUIDE[0]?.key);
@@ -578,7 +576,7 @@ function resetProfile() {
     return;
   }
 
-  renderProfileSectionEditor(defaults?.profileV2 || createEmptyProfileV2());
+  renderProfileSectionEditor(createEmptyProfileV2());
   setStatus("已恢复空白模板。点击保存后生效。");
 }
 

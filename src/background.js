@@ -102,11 +102,7 @@ async function getSettings() {
   ]);
   return {
     profileV2: normalizeProfileV2(values[STORAGE_KEYS.profileV2] || DEFAULT_PROFILE_V2),
-    apiConfig: { ...DEFAULT_API_CONFIG, ...(values[STORAGE_KEYS.apiConfig] || {}) },
-    defaults: {
-      profileV2: DEFAULT_PROFILE_V2,
-      apiConfig: DEFAULT_API_CONFIG
-    }
+    apiConfig: { ...DEFAULT_API_CONFIG, ...(values[STORAGE_KEYS.apiConfig] || {}) }
   };
 }
 

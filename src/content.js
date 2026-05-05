@@ -527,13 +527,19 @@
     scheduleAssistantStateSave(getAssistantStateSnapshot());
   }
 
+  function renderAndSaveAssistantPanel(statusMessage = "", isError = false) {
+    renderAssistantPanel();
+    if (statusMessage) {
+      setAssistantStatus(statusMessage, isError);
+    }
+    queueAssistantStateSave();
+  }
+
   function goAssistantHome() {
     draftViewActive = false;
     activeCheatsheetCategory = "";
     sidebarFilter = "";
-    renderAssistantPanel();
-    setAssistantStatus("已返回主页。");
-    queueAssistantStateSave();
+    renderAndSaveAssistantPanel("已返回主页。");
   }
 
   function sendRuntimeMessage(message) {
@@ -1924,184 +1930,6 @@
         background: #fffdf8;
         line-height: 1.5;
       }
-      #${PANEL_ID} .arf-card {
-        padding: 8px;
-        border: 1px solid #e7dfd1;
-        border-radius: 12px;
-        background: #fff;
-      }
-      #${PANEL_ID} details.arf-card {
-        padding: 0;
-      }
-      #${PANEL_ID} details.arf-card > summary {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 8px 10px;
-        cursor: pointer;
-        list-style: none;
-      }
-      #${PANEL_ID} details.arf-card > summary::-webkit-details-marker {
-        display: none;
-      }
-      #${PANEL_ID} details.arf-card > .arf-section-body {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding: 0 10px 10px;
-      }
-      #${PANEL_ID} .arf-label {
-        color: #6f6a60;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-      #${PANEL_ID} .arf-value {
-        margin-top: 4px;
-        max-height: 88px;
-        overflow: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-        line-height: 1.45;
-      }
-      #${PANEL_ID} .arf-manual-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      #${PANEL_ID} .arf-cheatsheet {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      #${PANEL_ID} .arf-cheat-section > summary {
-        padding-bottom: 6px;
-      }
-      #${PANEL_ID} .arf-cheat-section-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: #2f2b24;
-      }
-      #${PANEL_ID} .arf-cheat-section-note {
-        color: #8a8174;
-        font-size: 11px;
-      }
-      #${PANEL_ID} .arf-cheat-group {
-        border: 1px solid #e7dfd1;
-        border-radius: 12px;
-        background: #fffdf8;
-        overflow: hidden;
-      }
-      #${PANEL_ID} .arf-cheat-group > summary {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 8px 10px;
-        cursor: pointer;
-        list-style: none;
-      }
-      #${PANEL_ID} .arf-cheat-group > summary::-webkit-details-marker {
-        display: none;
-      }
-      #${PANEL_ID} .arf-cheat-group-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: #2f2b24;
-      }
-      #${PANEL_ID} .arf-cheat-group-count {
-        flex: none;
-        padding: 1px 6px;
-        border-radius: 999px;
-        background: rgba(15, 107, 79, 0.12);
-        color: #0f6b4f;
-        font-size: 10px;
-        line-height: 1.5;
-      }
-      #${PANEL_ID} .arf-cheat-group-body {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 0 8px 8px;
-      }
-      #${PANEL_ID} .arf-cheat-item {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        padding: 7px;
-        border: 1px solid #e7dfd1;
-        border-radius: 10px;
-        background: #fff;
-      }
-      #${PANEL_ID} .arf-cheat-item.is-suggested {
-        border-color: #0f6b4f;
-        box-shadow: 0 0 0 2px rgba(15, 107, 79, 0.08);
-      }
-      #${PANEL_ID} .arf-cheat-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      #${PANEL_ID} .arf-cheat-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: #2f2b24;
-      }
-      #${PANEL_ID} .arf-cheat-tag {
-        flex: none;
-        padding: 1px 6px;
-        border-radius: 999px;
-        background: rgba(15, 107, 79, 0.12);
-        color: #0f6b4f;
-        font-size: 10px;
-        line-height: 1.5;
-      }
-      #${PANEL_ID} .arf-cheat-value {
-        min-height: 28px;
-        color: #4b463f;
-        font-size: 12px;
-        line-height: 1.45;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      #${PANEL_ID} .arf-cheat-copy {
-        min-height: 28px;
-        border: 0;
-        border-radius: 9px;
-        background: #0f6b4f;
-        color: #fff;
-        cursor: pointer;
-      }
-      #${PANEL_ID} .arf-cheat-copy:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-      #${PANEL_ID} .arf-manual-input {
-        width: 100%;
-        min-height: 62px;
-        height: 62px;
-        padding: 8px 9px;
-        border: 1px solid #ded6c8;
-        border-radius: 10px;
-        background: #fffdf8;
-        color: #202124;
-        font: inherit;
-        line-height: 1.45;
-        resize: none;
-      }
-      #${PANEL_ID} .arf-manual-input:focus {
-        outline: 2px solid rgba(15, 107, 79, 0.28);
-        border-color: #0f6b4f;
-      }
-      #${PANEL_ID} .arf-help {
-        margin-top: 0;
-        color: #8a8174;
-        font-size: 12px;
-        line-height: 1.4;
-      }
       #${PANEL_ID} .arf-footer {
         display: flex;
         flex-direction: column;
@@ -2330,9 +2158,10 @@
     panel.setAttribute(PANEL_HIDDEN_ATTR, assistantVisible ? "false" : "true");
     panel.setAttribute(PANEL_COLLAPSED_ATTR, assistantCollapsed ? "true" : "false");
     if (assistantVisible) {
-      renderAssistantPanel();
+      renderAndSaveAssistantPanel();
+    } else {
+      queueAssistantStateSave();
     }
-    queueAssistantStateSave();
   }
 
   function showAssistant() {
@@ -2342,8 +2171,7 @@
 
   function toggleAssistantCollapsed() {
     assistantCollapsed = !assistantCollapsed;
-    renderAssistantPanel();
-    queueAssistantStateSave();
+    renderAndSaveAssistantPanel();
   }
 
   function ensureAssistantPanel() {
@@ -4202,12 +4030,7 @@
     back.className = "arf-draft-back";
     back.textContent = "返回主页";
     back.title = "返回资料主页";
-    back.addEventListener("click", () => {
-      draftViewActive = false;
-      renderAssistantPanel();
-      setAssistantStatus("已返回主页。");
-      queueAssistantStateSave();
-    });
+    back.addEventListener("click", goAssistantHome);
 
     titleRow.append(titleWrap, back);
     head.append(titleRow);
@@ -4835,8 +4658,7 @@
       button.append(main, count);
       button.addEventListener("click", () => {
         activeCheatsheetCategory = section.category;
-        renderAssistantPanel();
-        queueAssistantStateSave();
+        renderAndSaveAssistantPanel();
       });
       overview.append(button);
     }
@@ -4869,8 +4691,7 @@
     back.textContent = "返回";
     back.addEventListener("click", () => {
       activeCheatsheetCategory = "";
-      renderAssistantPanel();
-      queueAssistantStateSave();
+      renderAndSaveAssistantPanel();
     });
 
     const title = document.createElement("div");
