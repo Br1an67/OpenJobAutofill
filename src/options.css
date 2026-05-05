@@ -118,12 +118,47 @@ h2 {
 }
 
 .resume-nav-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 9px 10px;
   border: 1px solid transparent;
   border-radius: 12px;
   color: var(--muted);
   text-decoration: none;
   font-size: 13px;
+}
+
+.nav-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.completion-badge {
+  flex: none;
+  min-width: 44px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(113, 107, 95, 0.1);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.completion-badge.is-partial {
+  background: rgba(195, 122, 24, 0.14);
+  color: var(--amber);
+}
+
+.completion-badge.is-good {
+  background: rgba(15, 107, 79, 0.14);
+  color: var(--green);
 }
 
 .resume-nav-list a:hover,
@@ -165,6 +200,12 @@ h2 {
 .profile-edit-head h3 {
   margin: 0;
   font-size: 18px;
+}
+
+.profile-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 
 .profile-edit-head p {
@@ -289,6 +330,28 @@ h2 {
   border: 1px solid rgba(216, 205, 189, 0.84);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.48);
+}
+
+.privacy-card {
+  margin-bottom: 12px;
+  padding: 13px;
+  border: 1px solid rgba(15, 107, 79, 0.18);
+  border-radius: 16px;
+  background: rgba(15, 107, 79, 0.08);
+}
+
+.privacy-title {
+  margin-bottom: 7px;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.privacy-card p {
+  margin: 6px 0 0;
+  color: #4d6458;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .tip-card h3 {

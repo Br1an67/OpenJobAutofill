@@ -1511,6 +1511,16 @@
         color: #6f6a60;
         font-size: 12px;
       }
+      #${FLOAT_ID} .arf-float-privacy {
+        margin-top: 8px;
+        padding: 8px 10px;
+        border: 1px solid rgba(15, 107, 79, 0.14);
+        border-radius: 12px;
+        background: rgba(15, 107, 79, 0.07);
+        color: #4d6458;
+        font-size: 11px;
+        line-height: 1.45;
+      }
       #${FLOAT_ID} .arf-float-close {
         width: 26px;
         min-width: 26px;
@@ -2237,6 +2247,7 @@
         </div>
         <button class="arf-float-close" type="button" data-action="float-hide" title="隐藏">×</button>
       </div>
+      <div class="arf-float-privacy">隐私：AI 不接收资料值；资料只保存在本机；插件不会自动提交。</div>
       <div class="arf-float-progress" data-role="float-progress">
         <div class="arf-float-track">
           <div class="arf-float-fill" data-role="float-fill"></div>

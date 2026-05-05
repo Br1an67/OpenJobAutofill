@@ -1049,7 +1049,12 @@ function renderProfileNav() {
   }
 
   fields.profileNav.innerHTML = RESUME_SECTION_GUIDE.map((section) => {
-    return `<a href="#profile-section-${escapeHtml(section.key)}" data-profile-nav="${escapeHtml(section.key)}">${escapeHtml(section.title)}</a>`;
+    return `
+      <a href="#profile-section-${escapeHtml(section.key)}" data-profile-nav="${escapeHtml(section.key)}">
+        <span class="nav-title">${escapeHtml(section.title)}</span>
+        <span class="completion-badge is-empty" data-completion-badge>0/0</span>
+      </a>
+    `;
   }).join("");
 
   fields.profileNav.querySelectorAll("[data-profile-nav]").forEach((link) => {
@@ -1076,7 +1081,8 @@ function renderProfileTips(activeKey = "") {
     "像网申页面一样直接填字段；保存时会在后台转换成 Markdown。",
     "同一个值如果不同网站叫法不同，可以点“添加自定义字段”补充别名。",
     "没有的经历可以留空；经历类模块可以添加多条。",
-    "保存后只写入本机 chrome.storage.local，不会同步到云端。"
+    "资料只保存在本机 chrome.storage.local，不会同步到云端。",
+    "AI 只接收页面字段和资料字段目录，不接收你填写的资料值。"
   ];
 
   fields.profileTips.innerHTML = `
@@ -1181,6 +1187,7 @@ function handleStructuredProfileClick(event) {
     const index = itemsRoot ? itemsRoot.querySelectorAll("[data-structured-item]").length : 0;
     itemsRoot?.insertAdjacentHTML("beforeend", renderStructuredItem(section, createBlankStructuredItem(section, index), index));
     syncProfileMarkdownFromSections();
+    updateProfileCompletion();
     setStatus(`已添加一条 ${section.itemLabel || section.title}。`);
     return;
   }
@@ -1188,6 +1195,7 @@ function handleStructuredProfileClick(event) {
   if (action === "remove-structured-item") {
     button.closest("[data-structured-item]")?.remove();
     syncProfileMarkdownFromSections();
+    updateProfileCompletion();
     setStatus(`已删除一条 ${section.itemLabel || section.title}。`);
     return;
   }
@@ -1196,6 +1204,7 @@ function handleStructuredProfileClick(event) {
     const target = button.closest("[data-custom-area]")?.querySelector("[data-custom-rows]");
     target?.insertAdjacentHTML("beforeend", renderCustomStructuredRow());
     syncProfileMarkdownFromSections();
+    updateProfileCompletion();
     setStatus("已添加自定义字段。");
     return;
   }
@@ -1203,6 +1212,7 @@ function handleStructuredProfileClick(event) {
   if (action === "remove-custom-row") {
     button.closest("[data-custom-row]")?.remove();
     syncProfileMarkdownFromSections();
+    updateProfileCompletion();
     setStatus("已删除自定义字段。");
   }
 }
@@ -1235,6 +1245,7 @@ function renderMarkdownSectionEditor(markdown) {
 
   fields.profileSectionEditor.innerHTML = known + extras;
   scheduleProfileSectionSync();
+  updateProfileCompletion();
 }
 
 function renderStructuredSection(section, data = null) {
@@ -1262,7 +1273,10 @@ function renderStructuredSection(section, data = null) {
     <section id="profile-section-${escapeHtml(section.key)}" class="profile-edit-section" data-profile-section="${escapeHtml(section.key)}" data-section-title="${escapeHtml(section.title)}" data-extra-section="${config.isExtra ? "true" : "false"}">
       <div class="profile-edit-head">
         <div>
-          <h3>${escapeHtml(section.title)}</h3>
+          <div class="profile-title-row">
+            <h3>${escapeHtml(section.title)}</h3>
+            <span class="completion-badge is-empty" data-completion-badge>0/0</span>
+          </div>
           <p>${escapeHtml(sectionDescription)}</p>
         </div>
         ${action}
@@ -1564,6 +1578,64 @@ function syncProfileMarkdownFromSections() {
     return;
   }
   fields.profileMarkdown.value = collectMarkdownFromSectionEditor();
+  updateProfileCompletion();
+}
+
+function updateProfileCompletion() {
+  if (!fields.profileSectionEditor) {
+    return;
+  }
+
+  const sections = Array.from(fields.profileSectionEditor.querySelectorAll("[data-profile-section]"));
+  for (const sectionEl of sections) {
+    const completion = getSectionCompletion(sectionEl);
+    const text = `${completion.filled}/${completion.total}`;
+    const state = getCompletionState(completion);
+
+    sectionEl.querySelectorAll("[data-completion-badge]").forEach((badge) => {
+      updateCompletionBadge(badge, text, state);
+    });
+
+    const navBadge = fields.profileNav?.querySelector(`[data-profile-nav="${CSS.escape(sectionEl.dataset.profileSection || "")}"] [data-completion-badge]`);
+    if (navBadge) {
+      updateCompletionBadge(navBadge, text, state);
+    }
+  }
+}
+
+function getSectionCompletion(sectionEl) {
+  const controls = Array.from(sectionEl.querySelectorAll("[data-field-label]"));
+  const customRows = Array.from(sectionEl.querySelectorAll("[data-custom-row]"));
+  const total = controls.length + customRows.length;
+  const filled = controls.filter((control) => String(control.value || "").trim() !== "").length
+    + customRows.filter((row) => {
+      const label = String(row.querySelector("[data-custom-label]")?.value || "").trim();
+      const value = String(row.querySelector("[data-custom-value]")?.value || "").trim();
+      return label !== "" && value !== "";
+    }).length;
+
+  return { filled, total };
+}
+
+function getCompletionState(completion) {
+  if (!completion.total) {
+    return "empty";
+  }
+  const ratio = completion.filled / completion.total;
+  if (ratio >= 0.8) {
+    return "good";
+  }
+  if (ratio >= 0.35) {
+    return "partial";
+  }
+  return "empty";
+}
+
+function updateCompletionBadge(badge, text, state) {
+  badge.textContent = text;
+  badge.classList.toggle("is-good", state === "good");
+  badge.classList.toggle("is-partial", state === "partial");
+  badge.classList.toggle("is-empty", state === "empty");
 }
 
 function collectMarkdownFromSectionEditor() {
