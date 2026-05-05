@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "简历资料小抄",
+  "name": "OpenJobAutofill",
   "version": "0.7.8",
   "description": "Local Markdown resume helper with privacy-first AI page analysis and draft-assisted form filling.",
   "permissions": [
@@ -16,7 +16,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "简历资料小抄",
+    "default_title": "OpenJobAutofill",
     "default_popup": "src/popup.html"
   },
   "options_page": "src/options.html",

@@ -2400,11 +2400,11 @@
     const titleWrap = document.createElement("div");
     const title = document.createElement("div");
     title.className = "arf-title";
-    title.textContent = "资料小抄";
+    title.textContent = "OpenJobAutofill";
     const subtitle = document.createElement("div");
     subtitle.className = "arf-subtitle";
     subtitle.dataset.role = "subtitle";
-    subtitle.textContent = "本地 Markdown 小抄。可生成填充草稿，确认后只把选中项写入当前网页。";
+    subtitle.textContent = "本机 Markdown 简历资料。可生成填充草稿，确认后只把选中项写入当前网页。";
     titleWrap.append(title, subtitle);
 
     const headerActions = document.createElement("div");
@@ -2572,7 +2572,7 @@
         renderAssistantPanel();
       }
       if (options.force && assistantVisible) {
-        setAssistantStatus("已刷新本机 Markdown 小抄。");
+        setAssistantStatus("已刷新本机 Markdown 简历资料。");
       }
       return profile;
     } catch (error) {
@@ -2807,7 +2807,7 @@
           cleaned &&
           cleaned.length <= 80 &&
           /[\u4e00-\u9fa5A-Za-z]/.test(cleaned) &&
-          !/请输入|请选择|上传文件|内容列表|搜索分类或内容|资料小抄|填充草稿/.test(cleaned)
+          !/请输入|请选择|上传文件|内容列表|搜索分类或内容|OpenJobAutofill|填充草稿/.test(cleaned)
         ) {
           return cleaned.replace(/^[*•\s]+/, "");
         }
@@ -4032,7 +4032,7 @@
     }
 
     try {
-      setAutofillProgress("读取本机资料", 8, "正在加载 Markdown 小抄");
+      setAutofillProgress("读取本机资料", 8, "正在加载 Markdown 简历资料");
       await refreshCurrentProfile({ force: true });
       setAutofillProgress("扫描当前页面", 24, "展开可编辑区域并提取字段");
       setAssistantStatus("正在扫描当前页面并生成本地填充草稿...");
@@ -4244,7 +4244,7 @@
     if (draft.candidates.length === 0) {
       const empty = document.createElement("div");
       empty.className = "arf-empty";
-      empty.textContent = "没有匹配到可写入项。可以返回小抄，或者检查本地 Markdown 是否包含对应字段。";
+      empty.textContent = "没有匹配到可写入项。可以返回资料分类，或者检查本地 Markdown 是否包含对应字段。";
       head.append(empty);
       root.append(head);
       return;
@@ -4799,8 +4799,8 @@
       const empty = document.createElement("div");
       empty.className = "arf-empty";
       empty.textContent = currentProfileLoadPromise
-        ? "正在读取本机 Markdown 小抄..."
-        : "点击“设置”后先保存 Markdown 资料，这里会显示可复制的小抄。";
+        ? "正在读取本机 Markdown 简历资料..."
+        : "点击“设置”后先保存 Markdown 资料，这里会显示可参考和复制的内容。";
       list.append(empty);
       return;
     }
@@ -4821,7 +4821,7 @@
     if (sections.length === 0) {
       const empty = document.createElement("div");
       empty.className = "arf-empty";
-      empty.textContent = sidebarFilter ? "没有匹配的小抄项。" : "Markdown 里还没有 `- 字段：值` 形式的内容。";
+      empty.textContent = sidebarFilter ? "没有匹配的资料项。" : "Markdown 里还没有 `- 字段：值` 形式的内容。";
       list.append(empty);
       return;
     }
@@ -5041,8 +5041,8 @@
     }
     panel.setAttribute(PANEL_COLLAPSED_ATTR, assistantCollapsed ? "true" : "false");
     if (collapseBtn) {
-      collapseBtn.textContent = assistantCollapsed ? "小抄" : "收起";
-      collapseBtn.title = assistantCollapsed ? "展开资料小抄" : "收起资料小抄";
+      collapseBtn.textContent = assistantCollapsed ? "资料" : "收起";
+      collapseBtn.title = assistantCollapsed ? "展开 OpenJobAutofill 资料面板" : "收起 OpenJobAutofill 资料面板";
     }
     if (copyCategoryBtn) {
       copyCategoryBtn.disabled = !activeSection;
@@ -5086,7 +5086,7 @@
         status.textContent = activeSection
           ? `${adapterLabel}正在查看：${activeSection.category}。内容可直接选中复制。`
           : totalItems > 0
-            ? `${adapterLabel}已加载 ${sections.length} 个分类、${totalItems} 条本地小抄。`
+            ? `${adapterLabel}已加载 ${sections.length} 个分类、${totalItems} 条本地资料。`
             : `${adapterLabel}资料只从本机读取。`;
       }
     }

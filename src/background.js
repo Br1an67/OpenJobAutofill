@@ -772,7 +772,7 @@ function addCustomProfileFields(catalog, customFields) {
 function profileToMarkdown(profile) {
   const source = isPlainObject(profile) ? profile : {};
   const lines = [
-    "# 简历资料小抄",
+    "# OpenJobAutofill Resume Profile",
     "",
     "> 本文件只保存在本机。按 `## 大类` 和 `- 字段：值` 追加内容，侧边栏会自动按大类展示。",
     ""

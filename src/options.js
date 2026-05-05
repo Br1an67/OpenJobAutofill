@@ -639,7 +639,7 @@ async function saveProfile() {
       payload: { profileMarkdown }
     });
     setStatus("简历资料保存成功，已写入本机的 chrome.storage.local。");
-    setInlineFeedback("Markdown 小抄已保存到本机。");
+    setInlineFeedback("Markdown 简历资料已保存到本机。");
   } catch (error) {
     setStatus(`保存资料失败：${error.message}`, true);
     setInlineFeedback(`保存资料失败：${error.message}`, true);
@@ -656,7 +656,7 @@ async function exportProfile() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `resume-cheatsheet-${new Date().toISOString().slice(0, 10)}.md`;
+    anchor.download = `openjobautofill-profile-${new Date().toISOString().slice(0, 10)}.md`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -682,8 +682,8 @@ async function importProfileFromFile() {
       type: "AI_RESUME_SAVE_SETTINGS",
       payload: imported.profile ? { profile: imported.profile, profileMarkdown: imported.profileMarkdown } : { profileMarkdown: imported.profileMarkdown }
     });
-    setStatus("已导入并保存到本机。侧边栏会立即读取这份 Markdown 小抄。");
-    setInlineFeedback(imported.profile ? "旧 JSON 已转换为 Markdown 并保存。" : "Markdown 小抄已保存到本机。");
+    setStatus("已导入并保存到本机。侧边栏会立即读取这份 Markdown 简历资料。");
+    setInlineFeedback(imported.profile ? "旧 JSON 已转换为 Markdown 并保存。" : "Markdown 简历资料已保存到本机。");
   } catch (error) {
     setStatus(`导入失败：${error.message}`, true);
     setInlineFeedback(`导入失败：${error.message}`, true);
@@ -1550,7 +1550,7 @@ function updateCompletionBadge(badge, text, state) {
 
 function collectMarkdownFromSectionEditor() {
   const lines = [
-    "# 简历资料小抄",
+    "# OpenJobAutofill Resume Profile",
     "",
     "> 本文件只保存在本机。设置页用结构化表单填写，保存时自动转换为 Markdown，侧边栏和一键填写都会读取这份内容。",
     ""
@@ -1731,7 +1731,7 @@ function parseImportedProfileText(text, fileName = "") {
 function profileToMarkdown(profile) {
   const source = isPlainObject(profile) ? profile : {};
   const lines = [
-    "# 简历资料小抄",
+    "# OpenJobAutofill Resume Profile",
     "",
     "> 本文件只保存在本机。按 `## 大类` 和 `- 字段：值` 追加内容，侧边栏会自动按大类展示。",
     ""
