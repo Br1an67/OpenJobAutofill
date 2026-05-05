@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "简历资料小抄",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "Local Markdown resume helper with privacy-first AI page analysis and draft-assisted form filling.",
   "permissions": [
     "activeTab",

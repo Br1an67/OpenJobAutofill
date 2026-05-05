@@ -933,7 +933,7 @@ function profileField(label, overrides = {}) {
   const isLongText = /内容|描述|职责|成果|课程|评价|说明|原因|地址|专业描述|专业课程|毕业论文|技能|活动|学术成果|自我/.test(normalized);
   const isDate = /出生日期/.test(normalized);
   const isMonth = /时间|日期|年月|发表|获得|取得|入职/.test(normalized) && !isDate && !/有效期/.test(normalized);
-  const isChoice = /^(性别|血型|婚姻状况|高考科目|学历|学位|学习形式|学校类别|录取批次|培养方式|户籍类型|政治面貌|外语种类|掌握程度|听说能力|读写能力|奖励等级|证件号码类型|与紧急联系人关系|关系)$/.test(normalized) || /^是否|^有无/.test(normalized);
+  const isChoice = /^(性别|血型|婚姻状况|健康状况|高考科目|学历|学位|学制|学习形式|学校类别|录取批次|培养方式|升学类型|户籍类型|政治面貌|专业技术职称|外语种类|掌握程度|听说能力|读写能力|奖励等级|证件号码类型|与紧急联系人关系|关系)$/.test(normalized) || /^是否|^有无/.test(normalized);
 
   const field = {
     key: normalizeProfileSectionTitle(normalized) || `field_${Math.random().toString(36).slice(2)}`,
@@ -964,6 +964,9 @@ function getStructuredFieldOptions(label) {
   if (/婚姻状况/.test(label)) {
     return ["", "未婚", "已婚", "离异", "其他"];
   }
+  if (/健康状况/.test(label)) {
+    return ["", "健康", "良好", "一般", "其他"];
+  }
   if (/高考科目/.test(label)) {
     return ["", "理科", "文科", "综合改革"];
   }
@@ -976,17 +979,32 @@ function getStructuredFieldOptions(label) {
   if (/学位/.test(label)) {
     return ["", "博士", "硕士", "学士", "无"];
   }
+  if (/学制/.test(label)) {
+    return ["", "2年", "2.5年", "3年", "4年", "5年", "其他"];
+  }
   if (/学习形式/.test(label)) {
     return ["", "全日制", "非全日制"];
   }
   if (/学校类别/.test(label)) {
-    return ["", "985", "211", "双一流", "普通本科", "海外院校", "其他"];
+    return ["", "985", "211", "双一流", "普通本科", "普通高校", "海外院校", "其他"];
+  }
+  if (/录取批次/.test(label)) {
+    return ["", "本科提前批", "本科一批", "本科二批", "专科批", "普通批", "强基计划", "综合评价", "保送生", "其他"];
   }
   if (/培养方式/.test(label)) {
     return ["", "非定向", "定向", "统招统分", "委托培养", "自费"];
   }
+  if (/升学类型/.test(label)) {
+    return ["", "普通高等学校招生全国统一考试（高考）", "全国硕士研究生统一招生考试", "推荐免试", "自主招生", "港澳台联招", "海外申请", "其他"];
+  }
+  if (/户籍类型/.test(label)) {
+    return ["", "居民户", "农业户口", "非农业户口", "家庭户口", "集体户口", "其他"];
+  }
   if (/政治面貌/.test(label)) {
     return ["", "中共党员", "中共预备党员", "共青团员", "群众", "其他"];
+  }
+  if (/专业技术职称/.test(label)) {
+    return ["", "无", "初级", "中级", "副高级", "正高级", "其他"];
   }
   if (/外语种类/.test(label)) {
     return ["", "英语", "日语", "法语", "德语", "其他"];
