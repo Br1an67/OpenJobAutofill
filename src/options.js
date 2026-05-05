@@ -132,127 +132,109 @@ const RESUME_SECTION_GUIDE = [
     key: "basic",
     title: "基本信息",
     aliases: ["个人信息", "联系方式"],
-    placeholder: "- 姓名：李明\n- 性别：男\n- 出生日期：2001-02-20\n- 手机号码：13900000000\n- 电子邮箱：liming@example.com\n- 证件类型：身份证\n- 证件号码：110101200102201238",
     tips: ["姓名、电话、邮箱、证件号建议放在这里。", "同一个值可以写多个常见字段名，例如“电话”和“手机号码”，方便不同网站匹配。"]
   },
   {
     key: "intention",
     title: "求职意向",
     aliases: ["求职意向 添加"],
-    placeholder: "- 意向岗位：软件开发工程师\n- 预计入职时间：2027-07\n- 期望工作城市：上海\n- 期望薪资：面议\n- 是否接受调剂：是",
     tips: ["岗位、城市、薪资、到岗时间和调剂意愿都放这里。", "如果不同公司岗位叫法不同，可以追加“目标岗位”“应聘岗位”等别名。"]
   },
   {
     key: "education",
     title: "教育经历",
     aliases: ["教育背景", "学历经历"],
-    placeholder: "### 教育经历 1 最高学历\n- 开始时间：2024-09\n- 结束时间：2027-06\n- 学校名称：星河大学\n- 专业名称：软件工程\n- 学历：硕士研究生\n- 学位：硕士\n- GPA分数：3.80\n- 专业排名：前10%",
-    tips: ["按最高学历到较早学历排序。", "每段经历用 `### 教育经历 1` 分开，学校、专业、学历、学位、时间尽量写全。"]
+    tips: ["按最高学历到较早学历排序。", "每段经历用“添加一条”维护，学校、专业、学历、学位、时间尽量写全。"]
   },
   {
     key: "internship",
     title: "实习经历",
     aliases: ["工作/实习经历", "实践经历"],
-    placeholder: "### 实习经历 1\n- 开始时间：2025-07\n- 结束时间：2026-03\n- 公司：星桥科技有限公司\n- 部门：平台研发部\n- 职位：软件开发实习生\n- 工作内容：参与招聘系统和数据看板开发。\n- 工作成果：完成 6 个模块交付。",
     tips: ["公司、部门、岗位、时间、地点、工作内容和成果是高频字段。", "证明人信息如果愿意提供，也可以作为字段追加。"]
   },
   {
     key: "work",
     title: "工作经历",
     aliases: ["正式工作经历"],
-    placeholder: "### 工作经历 1\n- 开始时间：\n- 结束时间：\n- 公司：\n- 部门：\n- 职位：\n- 工作内容：\n- 工作成果：",
     tips: ["应届生没有正式工作经历可以留空。", "留空模块不会影响资料保存，后续需要时再补。"]
   },
   {
     key: "project",
     title: "项目经历/实践活动",
     aliases: ["项目经历", "实践活动"],
-    placeholder: "### 项目经历 1\n- 项目名称：隐私优先的简历表单助手\n- 开始时间：2025-03\n- 结束时间：2025-06\n- 职位：前端负责人\n- 项目内容：设计本地资料库、字段扫描和草稿填写流程。\n- 本人职责：负责浏览器扩展侧边栏和字段匹配。\n- 项目成果：完成可运行原型。",
     tips: ["项目名、角色、项目内容、本人职责、项目成果最好分开写。", "如果网站要求“实践方式”，也可以直接加一行。"]
   },
   {
     key: "student",
     title: "干部任职经历（在校职务）",
     aliases: ["学生工作", "干部任职经历", "在校职务", "社团工作"],
-    placeholder: "### 干部任职经历（在校职务） 1\n- 组织名称：软件工程学院技术协会\n- 职位：活动负责人\n- 开始时间：2020-09\n- 结束时间：2022-06\n- 工作内容：组织技术分享和项目交流活动。\n- 本人职责：负责活动策划、报名统计和现场协调。",
     tips: ["学生会、班委、社团、干部任职都可以放这里。", "不同网站可能叫“学生工作”“在校职务”或“干部任职经历”。"]
   },
   {
     key: "awards",
     title: "奖惩情况",
     aliases: ["奖励情况", "荣誉成果"],
-    placeholder: "### 奖惩 1\n- 奖惩时间：2022-06\n- 奖惩名称：大学生软件创新赛省级二等奖\n- 颁奖单位：省级大学生软件创新赛组委会\n- 奖励等级：省级\n- 奖惩描述：负责项目原型设计和前端实现。",
     tips: ["建议按时间倒序填写。", "奖项名称、颁奖单位、等级、描述拆开写，自动匹配更稳。"]
   },
   {
     key: "language",
     title: "外语能力",
     aliases: ["语言能力", "英语能力"],
-    placeholder: "### 外语能力 1\n- 外语种类：英语\n- 证书名称（技能名称）：大学英语六级\n- 成绩：502\n- 获得时间：2020-12\n- 掌握程度：熟练\n- 听说能力：熟练\n- 读写能力：熟练",
     tips: ["CET、TOEFL、IELTS、GRE、GMAT 都建议写成单独字段。", "如果没有参加某项考试，可以写 `TOEFL：未参加`。"]
   },
   {
     key: "computer",
     title: "计算机技能（IT技能）",
     aliases: ["计算机技能", "IT技能", "证书技能"],
-    placeholder: "### 计算机技能 1\n- 获得时间：2024-06\n- 证书名称（技能名称）：前端开发与浏览器扩展开发\n- 成绩：熟练\n- 掌握程度：熟练",
     tips: ["计算机技能通常可以添加多条。", "通用技能长描述建议放到“其他信息”的“爱好及专长”，具体证书放到“证书”模块。"]
   },
   {
     key: "certificates",
     title: "证书",
     aliases: ["证书信息", "资格证书"],
-    placeholder: "### 证书 1\n- 证书获得时间：2020-12\n- 证书名称（技能名称）：大学英语六级\n- 证书编号：CET620201200001\n- 授予单位：全国大学英语六级考试委员会\n- 证书说明：英语能力证明。",
     tips: ["适合放职业资格证、技能证书、荣誉证书。", "证书编号、授予单位和证书说明不是每个网站都要求，但有就可以写。"]
   },
   {
     key: "family",
     title: "家庭情况",
     aliases: ["家庭信息", "家庭及社会关系"],
-    placeholder: "### 家庭情况 1 父亲\n- 姓名：李建国\n- 关系：父亲\n- 出生日期：1970-05-12\n- 电话：13800000001\n- 工作单位：蓝杉商贸有限公司\n- 职务：运营主管\n- 政治面貌：群众",
-    tips: ["每位家庭成员用一个 `###` 小标题分开。", "常见字段是姓名、关系、出生日期、电话、工作单位、职务、政治面貌。"]
+    tips: ["每位家庭成员用一条记录维护。", "常见字段是姓名、关系、出生日期、电话、工作单位、职务、政治面貌。"]
   },
   {
     key: "training",
     title: "培训经历",
     aliases: ["培训"],
-    placeholder: "### 培训经历 1\n- 开始时间：\n- 结束时间：\n- 培训名称：\n- 培训机构：\n- 培训地点：\n- 培训课程：\n- 培训内容：",
     tips: ["没有培训经历可以留空。", "如果公司表单要求培训经历，按时间、机构、课程、内容拆分最容易匹配。"]
   },
   {
     key: "papers",
     title: "论文和著作",
     aliases: ["论文著作", "论文"],
-    placeholder: "### 论文和著作 1\n- 发表时间：\n- 刊物名称：\n- 刊物层级：\n- 论文名称：\n- 论文描述：",
     tips: ["没有论文著作可以留空。", "刊物名称、论文名称和描述拆开写，方便复制到不同字段。"]
   },
   {
     key: "patent",
     title: "专利",
     aliases: ["专利成果"],
-    placeholder: "### 专利 1\n- 发表时间：\n- 专利名称：\n- 专利编号：\n- 专利类型：\n- 专利成果：",
-    tips: ["没有专利可以留空。", "如果有多个专利，继续追加 `### 专利 2`。"]
+    tips: ["没有专利可以留空。", "如果有多个专利，继续点击“添加一条”。"]
   },
   {
     key: "self",
     title: "自我描述",
     aliases: ["自我评价", "自我介绍"],
-    placeholder: "- 自我描述：学习能力强，沟通清晰，重视代码质量、交付稳定性和用户体验。\n- 自我评价：学习能力强，沟通清晰，习惯输出文档和复盘。",
     tips: ["这类内容主要是提醒和复制，不一定适合完全自动填写。", "建议写成 2 到 4 句短句，便于按字数要求裁剪。"]
   },
   {
     key: "declarations",
     title: "有关声明",
     aliases: ["个人声明", "声明"],
-    placeholder: "- 是否存在亲属在应聘单位工作：否\n- 是否患有影响工作的疾病：否\n- 是否存在不良行为记录：否\n- 是否享有境外长期或永久居留权：否\n- 是否同意背景调查：是",
     tips: ["声明类问题通常要认真核对，不建议盲填。", "行业或公司专属措辞建议统一写成“应聘单位”。"]
   },
   {
     key: "other",
     title: "其他信息",
     aliases: ["补充信息", "自定义资料"],
-    placeholder: "- GitHub：https://github.com/example\n- 个人主页：https://example.com\n- 招聘信息来源：招聘官网",
-    tips: ["放没有固定归属但经常会用到的信息。", "如果某类信息越来越多，可以新增独立 `## 大类`。"]
+    tips: ["放没有固定归属但经常会用到的信息。", "如果某类信息越来越多，可以用自定义字段或后续新增模块承载。"]
   }
 ];
 
@@ -1281,181 +1263,8 @@ function renderCustomStructuredRow(row = {}) {
   `;
 }
 
-function parseStructuredProfileMarkdown(markdown) {
-  const result = { sections: {}, extraSections: [] };
-  let currentTitle = "";
-  let currentLines = [];
-
-  const flush = () => {
-    if (!currentTitle) {
-      return;
-    }
-    const section = getStructuredSectionByTitle(currentTitle);
-    const body = currentLines.join("\n").trim();
-    if (section) {
-      result.sections[section.key] = mergeStructuredSectionData(
-        section,
-        result.sections[section.key],
-        parseStructuredSectionBody(section, body)
-      );
-    } else {
-      result.extraSections.push({
-        title: currentTitle,
-        body,
-        custom: parseKeyValueLines(body).custom
-      });
-    }
-  };
-
-  for (const rawLine of String(markdown || "").split(/\r?\n/)) {
-    const heading = rawLine.match(/^##\s+(.+)$/);
-    if (heading) {
-      flush();
-      currentTitle = heading[1].replace(/#+\s*$/, "").trim();
-      currentLines = [];
-      continue;
-    }
-    if (!currentTitle) {
-      continue;
-    }
-    currentLines.push(rawLine);
-  }
-  flush();
-
-  return result;
-}
-
-function parseStructuredSectionBody(section, body) {
-  if (section.kind === "repeat") {
-    return { items: parseRepeatedStructuredItems(section, body) };
-  }
-  return parseSimpleStructuredValues(section, body);
-}
-
-function parseRepeatedStructuredItems(section, body) {
-  const items = [];
-  let currentTitle = "";
-  let currentLines = [];
-
-  const flush = () => {
-    if (!currentTitle && currentLines.length === 0) {
-      return;
-    }
-    const parsed = parseSimpleStructuredValues(section, currentLines.join("\n"));
-    items.push({
-      title: currentTitle || `${section.itemLabel || section.title} ${items.length + 1}`,
-      values: parsed.values,
-      custom: parsed.custom
-    });
-  };
-
-  for (const rawLine of String(body || "").split(/\r?\n/)) {
-    const heading = rawLine.match(/^###\s+(.+)$/);
-    if (heading) {
-      flush();
-      currentTitle = heading[1].replace(/#+\s*$/, "").trim();
-      currentLines = [];
-      continue;
-    }
-    currentLines.push(rawLine);
-  }
-  flush();
-
-  if (items.length === 0 && String(body || "").trim()) {
-    const parsed = parseSimpleStructuredValues(section, body);
-    items.push({
-      title: `${section.itemLabel || section.title} 1`,
-      values: parsed.values,
-      custom: parsed.custom
-    });
-  }
-
-  return items;
-}
-
-function parseSimpleStructuredValues(section, body) {
-  const values = {};
-  const custom = [];
-  const parsed = parseKeyValueLines(body);
-
-  for (const row of parsed.rows) {
-    const field = matchStructuredField(section, row.label);
-    if (field) {
-      values[field.label] = row.value;
-    } else if (row.label || row.value) {
-      custom.push(row);
-    }
-  }
-
-  return { values, custom };
-}
-
-function parseKeyValueLines(body) {
-  const rows = [];
-  const custom = [];
-  let current = null;
-
-  for (const rawLine of String(body || "").split(/\r?\n/)) {
-    const line = rawLine.replace(/\t/g, "  ");
-    const trimmed = line.trim();
-    if (!trimmed || /^#{1,6}\s+/.test(trimmed) || trimmed.startsWith(">")) {
-      continue;
-    }
-
-    const bullet = trimmed.match(/^[-*+]\s+([^:：]+?)\s*[:：]\s*(.*)$/);
-    const keyValue = bullet || trimmed.match(/^([^:：]{1,80})\s*[:：]\s*(.*)$/);
-    if (keyValue) {
-      current = {
-        label: normalizePlainText(keyValue[1], 80),
-        value: String(keyValue[2] || "").trim()
-      };
-      rows.push(current);
-      custom.push(current);
-      continue;
-    }
-
-    if (current && /^\s{2,}/.test(line)) {
-      current.value = `${current.value}\n${trimmed}`.trim();
-    }
-  }
-
-  return { rows, custom };
-}
-
-function mergeStructuredSectionData(section, previous, next) {
-  if (!previous) {
-    return next;
-  }
-  if (section.kind === "repeat") {
-    return {
-      items: [...(previous.items || []), ...(next.items || [])]
-    };
-  }
-  return {
-    values: { ...(previous.values || {}), ...(next.values || {}) },
-    custom: [...(previous.custom || []), ...(next.custom || [])]
-  };
-}
-
-function getStructuredSectionByTitle(title) {
-  const normalized = normalizeProfileSectionTitle(title);
-  return STRUCTURED_RESUME_SECTIONS.find((section) => {
-    const guide = RESUME_SECTION_GUIDE.find((item) => item.key === section.key);
-    const candidates = [section.title, ...(guide?.aliases || [])].map(normalizeProfileSectionTitle);
-    return candidates.includes(normalized);
-  }) || null;
-}
-
 function getStructuredSectionConfig(key) {
   return STRUCTURED_RESUME_SECTIONS.find((section) => section.key === key) || null;
-}
-
-function matchStructuredField(section, label) {
-  const normalized = normalizeProfileSectionTitle(label);
-  return (section.fields || []).find((field) => {
-    const candidates = [field.label, ...(field.aliases || [])].map(normalizeProfileSectionTitle);
-    return candidates.includes(normalized);
-  }) || null;
 }
 
 function createBlankStructuredItem(section, index = 0) {
@@ -1734,41 +1543,7 @@ function normalizeCustomRows(rows) {
 }
 
 function getProfileV2FromSettings(settings) {
-  if (settings?.profileV2) {
-    return normalizeProfileV2(settings.profileV2);
-  }
-
-  if (typeof settings?.profileMarkdown === "string" && settings.profileMarkdown.trim()) {
-    return profileV2FromParsedMarkdown(settings.profileMarkdown);
-  }
-
-  if (settings?.profile) {
-    return profileV2FromParsedMarkdown(profileToMarkdown(settings.profile));
-  }
-
-  return createEmptyProfileV2();
-}
-
-function profileV2FromParsedMarkdown(markdown) {
-  const parsed = parseStructuredProfileMarkdown(markdown);
-  const profileV2 = createEmptyProfileV2();
-  for (const section of STRUCTURED_RESUME_SECTIONS) {
-    if (parsed.sections[section.key]) {
-      profileV2.sections[section.key] = {
-        ...normalizeProfileSectionData(section, parsed.sections[section.key]),
-        key: section.key,
-        title: section.title
-      };
-    }
-  }
-  profileV2.customSections = parsed.extraSections
-    .map((section, index) => normalizeCustomProfileSection({
-      key: `extra-${index}`,
-      title: section.title,
-      custom: section.custom?.length ? section.custom : parseKeyValueLines(section.body).custom
-    }, index))
-    .filter(hasSimpleSectionData);
-  return normalizeProfileV2(profileV2);
+  return normalizeProfileV2(settings?.profileV2 || createEmptyProfileV2());
 }
 
 function createProfileBackup(profileV2) {
@@ -1777,72 +1552,6 @@ function createProfileBackup(profileV2) {
     version: 1,
     exportedAt: new Date().toISOString(),
     profileV2: normalizeProfileV2(profileV2)
-  };
-}
-
-function createEmptyProfile() {
-  return {
-    basic: {
-      name: "",
-      gender: "",
-      birthDate: "",
-      ethnicity: "",
-      politicalStatus: "",
-      nativePlace: "",
-      hukou: "",
-      currentAddress: "",
-      heightCm: "",
-      weightKg: "",
-      email: "",
-      phone: "",
-      emergencyContactName: "",
-      emergencyContactPhone: "",
-      expectedAnnualSalaryWan: ""
-    },
-    education: [],
-    experiences: [],
-    campus: [],
-    family: {
-      father: createEmptyFamilyMember("父亲"),
-      mother: createEmptyFamilyMember("母亲")
-    },
-    certificates: [],
-    awards: [],
-    customFields: {
-      basic: []
-    },
-    other: {
-      languageLevel: "",
-      languageScore: "",
-      hobbyCategory: "",
-      hobbyDetail: "",
-      selfEvaluation: "",
-      source: "",
-      hasDriverLicense: "",
-      acceptsTransfer: ""
-    },
-    declarations: {
-      relativesInCompany: "否",
-      majorDisease: "否",
-      outsideEmploymentOrEquity: "否",
-      badRecord: "否",
-      overseasResidency: "否"
-    }
-  };
-}
-
-function createEmptyFamilyMember(role) {
-  return {
-    relationship: role,
-    name: "",
-    birthDate: "",
-    gender: role === "父亲" ? "男" : "女",
-    politicalStatus: "",
-    educationLevel: "",
-    employer: "",
-    title: "",
-    phone: "",
-    note: ""
   };
 }
 
@@ -1875,128 +1584,6 @@ function parseImportedProfileBackup(text) {
   }
 
   return normalizeProfileV2(parsed.profileV2);
-}
-
-function profileToMarkdown(profile) {
-  const source = isPlainObject(profile) ? profile : {};
-  const lines = [
-    "# OpenJobAutofill Resume Profile",
-    "",
-    "> 本文件只保存在本机。按 `## 大类` 和 `- 字段：值` 追加内容，侧边栏会自动按大类展示。",
-    ""
-  ];
-
-  addMarkdownSimpleSection(lines, "基本信息", source.basic || {}, BASIC_FIELDS.map(fieldSpecToMarkdownDef));
-  addMarkdownRepeatedSection(lines, "教育经历", source.education, EDUCATION_FIELDS.map(fieldSpecToMarkdownDef), "教育经历");
-  const splitExperience = splitMarkdownExperienceItems(source.experiences);
-  addMarkdownRepeatedSection(lines, "实习经历", splitExperience.internships, EXPERIENCE_FIELDS.map(fieldSpecToMarkdownDef), "实习经历");
-  addMarkdownRepeatedSection(lines, "项目经历", splitExperience.projects, EXPERIENCE_FIELDS.map(fieldSpecToMarkdownDef), "项目经历");
-  addMarkdownRepeatedSection(lines, "社团工作", source.campus, CAMPUS_FIELDS.map(fieldSpecToMarkdownDef), "社团工作");
-  addMarkdownFamilySection(lines, source.family || {});
-  addMarkdownRepeatedSection(lines, "证书技能", source.certificates, CERTIFICATE_FIELDS.map(fieldSpecToMarkdownDef), "证书");
-  addMarkdownRepeatedSection(lines, "奖惩情况", source.awards, AWARD_FIELDS.map(fieldSpecToMarkdownDef), "奖惩");
-  addMarkdownSimpleSection(lines, "其他信息", source.other || {}, OTHER_FIELDS.map(fieldSpecToMarkdownDef));
-  addMarkdownSimpleSection(lines, "有关声明", source.declarations || {}, DECLARATION_FIELDS.map(fieldSpecToMarkdownDef));
-  addMarkdownCustomFields(lines, source.customFields);
-
-  return `${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
-}
-
-function fieldSpecToMarkdownDef(spec) {
-  return [spec.key, spec.label];
-}
-
-function addMarkdownSimpleSection(lines, title, data, defs) {
-  lines.push(`## ${title}`);
-  for (const [key, label] of defs) {
-    lines.push(`- ${label}：${formatMarkdownValue(data?.[key])}`);
-  }
-  lines.push("");
-}
-
-function addMarkdownRepeatedSection(lines, title, items, defs, itemLabel) {
-  lines.push(`## ${title}`);
-  const list = Array.isArray(items) && items.length > 0 ? items : [{}];
-  list.forEach((item, index) => {
-    if (list.length > 1 || !isEmptyMarkdownObject(item)) {
-      lines.push(`### ${itemLabel} ${index + 1}`);
-    }
-    for (const [key, label] of defs) {
-      lines.push(`- ${label}：${formatMarkdownValue(item?.[key])}`);
-    }
-    lines.push("");
-  });
-}
-
-function addMarkdownFamilySection(lines, family) {
-  lines.push("## 家庭信息");
-  for (const [key, title] of [
-    ["father", "父亲"],
-    ["mother", "母亲"]
-  ]) {
-    lines.push(`### ${title}`);
-    const member = family?.[key] || {};
-    for (const spec of FAMILY_MEMBER_FIELDS) {
-      lines.push(`- ${spec.label}：${formatMarkdownValue(member[spec.key])}`);
-    }
-    lines.push("");
-  }
-}
-
-function splitMarkdownExperienceItems(items) {
-  const list = Array.isArray(items) ? items : [];
-  const projects = [];
-  const internships = [];
-
-  for (const item of list) {
-    const organization = String(item?.organization || "");
-    const role = String(item?.role || "");
-    const looksLikeProject = /项目|作品|系统|平台|Agent|RAG|后台|助手/i.test(`${organization} ${role}`);
-    if (looksLikeProject && !/公司|集团|科技|有限|中心|研究院|事务所|工作室|实验室/.test(organization)) {
-      projects.push(item);
-    } else {
-      internships.push(item);
-    }
-  }
-
-  return { internships, projects };
-}
-
-function addMarkdownCustomFields(lines, customFields) {
-  const basicFields = Array.isArray(customFields?.basic) ? customFields.basic : [];
-  if (basicFields.length === 0) {
-    return;
-  }
-
-  lines.push("## 自定义资料");
-  for (const item of basicFields) {
-    const label = item?.label || item?.key || "自定义字段";
-    lines.push(`- ${label}：${formatMarkdownValue(item?.value)}`);
-    if (item?.note) {
-      lines.push(`  备注：${formatMarkdownValue(item.note)}`);
-    }
-  }
-  lines.push("");
-}
-
-function formatMarkdownValue(value) {
-  if (value == null) {
-    return "";
-  }
-
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-
-  return String(value).replace(/\s*\n+\s*/g, " ").trim();
-}
-
-function isEmptyMarkdownObject(value) {
-  if (!isPlainObject(value)) {
-    return true;
-  }
-
-  return Object.values(value).every((child) => child == null || String(child).trim() === "");
 }
 
 function updateModeBlocks() {

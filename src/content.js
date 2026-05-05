@@ -24,9 +24,7 @@
   let assistantPanel = null;
   let assistantStateSaveTimer = null;
   let assistantStateRestored = false;
-  let currentProfile = null;
   let currentProfileV2 = null;
-  let currentProfileMarkdown = "";
   let currentProfileLoadPromise = null;
   let currentSiteAdapter = null;
   let sidebarFilter = "";
@@ -2563,9 +2561,7 @@
     currentProfileLoadPromise = (async () => {
       const settings = await sendRuntimeMessage({ type: "AI_RESUME_GET_SETTINGS" });
       currentProfileV2 = settings.profileV2 || null;
-      currentProfile = settings.profile || {};
-      currentProfileMarkdown = settings.profileMarkdown || "";
-      return currentProfileV2 || currentProfile;
+      return currentProfileV2;
     })();
 
     try {
@@ -2581,7 +2577,7 @@
       if (assistantVisible) {
         setAssistantStatus(`读取本机资料失败：${error.message}`, true);
       }
-      return currentProfile || {};
+      return null;
     } finally {
       currentProfileLoadPromise = null;
     }
@@ -2690,102 +2686,8 @@
     });
   }
 
-  function parseMarkdownCheatsheet(markdown) {
-    const sections = [];
-    let currentSection = null;
-    let currentSubsection = "";
-    let currentItem = null;
-
-    function ensureSection(title = "常用资料") {
-      const normalizedTitle = normalizeCheatsheetCategory(title);
-      if (!currentSection || currentSection.category !== normalizedTitle) {
-        currentSection = sections.find((section) => section.category === normalizedTitle);
-        if (!currentSection) {
-          currentSection = { category: normalizedTitle, sourceTitles: [], items: [] };
-          sections.push(currentSection);
-        }
-      }
-      if (title && !currentSection.sourceTitles.includes(title)) {
-        currentSection.sourceTitles.push(title);
-      }
-      return currentSection;
-    }
-
-    function addItem(label, value) {
-      const cleanLabel = normalizeText(label, 120);
-      if (!cleanLabel) {
-        return;
-      }
-      const section = currentSection || ensureSection();
-      currentItem = {
-        label: cleanLabel,
-        value: String(value || "").trim(),
-        preview: "",
-        hasValue: false,
-        subsection: currentSubsection
-      };
-      currentItem.hasValue = currentItem.value !== "";
-      currentItem.preview = currentItem.hasValue ? formatQuickCopyValue(currentItem.value, 96) : "未填写";
-      section.items.push(currentItem);
-    }
-
-    for (const rawLine of String(markdown || "").split(/\r?\n/)) {
-      const line = rawLine.replace(/\t/g, "  ");
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith(">")) {
-        continue;
-      }
-
-      const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
-      if (heading) {
-        const level = heading[1].length;
-        const title = heading[2].replace(/#+\s*$/, "").trim();
-        currentItem = null;
-        if (level === 1) {
-          continue;
-        }
-        if (level === 2) {
-          currentSubsection = "";
-          ensureSection(title);
-          continue;
-        }
-        currentSubsection = title;
-        continue;
-      }
-
-      const bullet = trimmed.match(/^[-*+]\s+([^:：]+?)\s*[:：]\s*(.*)$/);
-      if (bullet) {
-        addItem(bullet[1], bullet[2]);
-        continue;
-      }
-
-      const keyValue = trimmed.match(/^([^:：]{1,60})\s*[:：]\s*(.+)$/);
-      if (keyValue) {
-        addItem(keyValue[1], keyValue[2]);
-        continue;
-      }
-
-      if (currentItem && /^\s{2,}/.test(line)) {
-        currentItem.value = `${currentItem.value}\n${trimmed}`.trim();
-        currentItem.hasValue = currentItem.value !== "";
-        currentItem.preview = currentItem.hasValue ? formatQuickCopyValue(currentItem.value, 96) : "未填写";
-      }
-    }
-
-    return sortCheatsheetSections(sections)
-      .map((section) => ({
-        ...section,
-        items: section.items.filter((item) => item.label)
-      }))
-      .filter((section) => section.items.length > 0);
-  }
-
   function getCurrentProfileSections() {
-    const sections = profileV2ToCheatsheetSections(currentProfileV2);
-    if (sections.length > 0) {
-      return sections;
-    }
-    return parseMarkdownCheatsheet(currentProfileMarkdown);
+    return profileV2ToCheatsheetSections(currentProfileV2);
   }
 
   function getCurrentProfileEntries() {
@@ -2795,7 +2697,7 @@
         const itemIndex = entries.length;
         entries.push({
           ...item,
-          itemId: item.itemId || `legacyProfile.items[${itemIndex}].value`,
+          itemId: item.itemId || `profileV2.unknown.items[${itemIndex}].value`,
           category: section.category,
           sectionKey: section.category,
           aliases: item.aliases || buildProfileItemAliases(section, item)
@@ -5230,7 +5132,7 @@
     if (draftViewActive) {
       applyDraftSelectionSnapshot();
     }
-    if (!currentProfileV2 && !currentProfile && !currentProfileLoadPromise) {
+    if (!currentProfileV2 && !currentProfileLoadPromise) {
       void refreshCurrentProfile();
     }
   }
@@ -5256,19 +5158,11 @@
 
   if (chrome?.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== "local" || (!changes.profileV2 && !changes.profile && !changes.profileMarkdown)) {
+      if (areaName !== "local" || !changes.profileV2) {
         return;
       }
 
-      if (changes.profileV2) {
-        currentProfileV2 = changes.profileV2.newValue || null;
-      }
-      if (changes.profile) {
-        currentProfile = changes.profile.newValue || {};
-      }
-      if (changes.profileMarkdown) {
-        currentProfileMarkdown = changes.profileMarkdown.newValue || "";
-      }
+      currentProfileV2 = changes.profileV2.newValue || null;
       if (assistantVisible) {
         renderAssistantPanel();
       }

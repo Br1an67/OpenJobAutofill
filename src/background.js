@@ -1,74 +1,3 @@
-const DEFAULT_PROFILE = {
-  basic: {
-    name: "",
-    gender: "",
-    birthDate: "",
-    ethnicity: "",
-    politicalStatus: "",
-    nativePlace: "",
-    hukou: "",
-    currentAddress: "",
-    heightCm: "",
-    weightKg: "",
-    email: "",
-    phone: "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    expectedAnnualSalaryWan: ""
-  },
-  education: [],
-  experiences: [],
-  campus: [],
-  family: {
-    father: {
-      relationship: "父亲",
-      name: "",
-      birthDate: "",
-      gender: "男",
-      politicalStatus: "",
-      educationLevel: "",
-      employer: "",
-      title: "",
-      phone: "",
-      note: ""
-    },
-    mother: {
-      relationship: "母亲",
-      name: "",
-      birthDate: "",
-      gender: "女",
-      politicalStatus: "",
-      educationLevel: "",
-      employer: "",
-      title: "",
-      phone: "",
-      note: ""
-    }
-  },
-  certificates: [],
-  awards: [],
-  customFields: {
-    basic: []
-  },
-  other: {
-    languageLevel: "",
-    languageScore: "",
-    hobbyCategory: "",
-    hobbyDetail: "",
-    selfEvaluation: "",
-    source: "",
-    hasDriverLicense: "",
-    acceptsTransfer: ""
-  },
-  declarations: {
-    relativesInCompany: "否",
-    majorDisease: "否",
-    outsideEmploymentOrEquity: "否",
-    badRecord: "否",
-    overseasResidency: "否"
-  }
-};
-
 const DEFAULT_API_CONFIG = {
   mode: "openai-compatible",
   baseUrl: "https://api.openai.com/v1",
@@ -95,8 +24,6 @@ const DEFAULT_PROFILE_V2 = {
 
 const STORAGE_KEYS = {
   profileV2: "profileV2",
-  profile: "profile",
-  profileMarkdown: "profileMarkdown",
   apiConfig: "apiConfig"
 };
 
@@ -104,118 +31,14 @@ const POPUP_STATE_KEY = "AI_RESUME_POPUP_STATE";
 const ASSISTANT_STATE_KEY = "AI_RESUME_ASSISTANT_STATE";
 const MAX_ASSISTANT_STATE_ITEMS = 20;
 
-const BASIC_FIELD_DEFS = [
-  ["name", "姓名", "姓名 / 名字 / 真实姓名"],
-  ["gender", "性别", "性别"],
-  ["birthDate", "出生日期", "生日 / 出生年月"],
-  ["ethnicity", "民族", "民族"],
-  ["politicalStatus", "政治面貌", "政治面貌"],
-  ["nativePlace", "籍贯", "籍贯"],
-  ["hukou", "生源户口", "户口 / 生源地"],
-  ["currentAddress", "当前居住地", "现居住地 / 通讯地址"],
-  ["heightCm", "净身高(cm)", "身高"],
-  ["weightKg", "体重(kg)", "体重"],
-  ["email", "电子邮箱", "邮箱 / Email"],
-  ["phone", "手机号码", "手机号 / 联系电话"],
-  ["emergencyContactName", "紧急联系人", "紧急联系人姓名"],
-  ["emergencyContactPhone", "紧急联系人电话", "紧急联系人手机号"],
-  ["expectedAnnualSalaryWan", "期望年收入(万元)", "期望薪资 / 期望年薪"]
-];
-
-const EDUCATION_FIELD_DEFS = [
-  ["type", "教育类型", "全日制 / 非全日制"],
-  ["startDate", "开始时间", "入学时间"],
-  ["endDate", "结束时间", "毕业时间"],
-  ["school", "毕业院校", "学校 / 院校"],
-  ["major", "专业", "所学专业"],
-  ["gpaRank", "绩点排名", "成绩排名 / GPA"],
-  ["educationLevel", "学历", "学历层次"],
-  ["degree", "学位", "学位"],
-  ["graduationStatus", "毕(结、肄)业", "毕业状态"],
-  ["certificateNumber", "学历证书号", "毕业证书编号"],
-  ["isHighest", "最高学历", "是否最高学历"],
-  ["isTransferredUndergrad", "是否专升本", "专升本"],
-  ["isOverseas", "是否海外学历", "海外学历"]
-];
-
-const EXPERIENCE_FIELD_DEFS = [
-  ["startDate", "开始时间", "实践开始时间"],
-  ["endDate", "结束时间", "实践结束时间"],
-  ["organization", "实习/实践单位", "单位 / 公司 / 项目单位"],
-  ["role", "实习岗位", "岗位 / 职位 / 角色"],
-  ["supervisor", "证明人", "证明人"],
-  ["supervisorPhone", "证明人联系方式", "证明人电话"],
-  ["description", "实践内容与收获", "工作内容 / 项目描述 / 经历描述"]
-];
-
-const CAMPUS_FIELD_DEFS = [
-  ["startDate", "开始时间", "社团开始时间"],
-  ["endDate", "结束时间", "社团结束时间"],
-  ["organization", "组织名称", "社团 / 组织"],
-  ["role", "职务", "职务 / 角色"],
-  ["description", "工作职责或活动描述", "职责 / 活动描述"]
-];
-
-const FAMILY_FIELD_DEFS = [
-  ["relationship", "关系", "亲属关系"],
-  ["name", "姓名", "亲属姓名"],
-  ["birthDate", "出生日期", "亲属出生日期"],
-  ["gender", "性别", "亲属性别"],
-  ["politicalStatus", "政治面貌", "亲属政治面貌"],
-  ["educationLevel", "学历", "亲属学历"],
-  ["employer", "工作单位", "亲属工作单位"],
-  ["title", "职务", "亲属职务"],
-  ["phone", "联系电话", "亲属联系电话"],
-  ["note", "备注", "亲属备注"]
-];
-
-const CERTIFICATE_FIELD_DEFS = [
-  ["name", "证书名称", "证书 / 资格证书"],
-  ["date", "取得时间", "证书取得时间"],
-  ["issuer", "颁发单位", "发证机构"],
-  ["level", "等级/分数", "证书等级 / 分数"],
-  ["number", "证书编号", "证书编号"],
-  ["note", "备注", "证书备注"]
-];
-
-const AWARD_FIELD_DEFS = [
-  ["name", "奖惩名称", "奖励 / 奖项名称"],
-  ["date", "奖惩时间", "获奖时间"],
-  ["organization", "奖惩单位", "颁奖单位 / 奖惩单位"],
-  ["level", "奖惩层级", "级别 / 层级"],
-  ["cancelDate", "奖惩解除时间", "解除时间"],
-  ["reason", "奖惩原因", "获奖原因 / 奖惩原因"]
-];
-
-const OTHER_FIELD_DEFS = [
-  ["languageLevel", "外语水平", "英语水平 / 外语等级"],
-  ["languageScore", "分数", "外语分数"],
-  ["hobbyCategory", "特长爱好类别", "爱好类别"],
-  ["hobbyDetail", "特长爱好具体内容", "爱好 / 特长"],
-  ["selfEvaluation", "自我评价", "个人评价 / 自我介绍"],
-  ["source", "招聘信息来源", "信息来源"],
-  ["hasDriverLicense", "是否获得机动车驾驶证", "驾驶证"],
-  ["acceptsTransfer", "是否接受调剂", "接受调剂"]
-];
-
-const DECLARATION_FIELD_DEFS = [
-  ["relativesInCompany", "是否存在亲属在应聘单位工作", "亲属任职 / 回避关系"],
-  ["majorDisease", "是否患有影响工作的疾病", "疾病声明"],
-  ["outsideEmploymentOrEquity", "是否在第三方企业任职或持股", "兼职 / 持股"],
-  ["badRecord", "是否存在不良行为记录", "不良记录"],
-  ["overseasResidency", "是否享有境外长期或永久居留权", "境外居留权"]
-];
-
 chrome.runtime.onInstalled.addListener(async () => {
   const existing = await chrome.storage.local.get([
     STORAGE_KEYS.profileV2,
-    STORAGE_KEYS.profile,
-    STORAGE_KEYS.profileMarkdown,
     STORAGE_KEYS.apiConfig
   ]);
   const next = {};
 
-  if (!existing[STORAGE_KEYS.profileV2] && !existing[STORAGE_KEYS.profileMarkdown] && !existing[STORAGE_KEYS.profile]) {
+  if (!existing[STORAGE_KEYS.profileV2]) {
     next[STORAGE_KEYS.profileV2] = DEFAULT_PROFILE_V2;
   }
 
@@ -277,19 +100,13 @@ async function handleMessage(message) {
 async function getSettings() {
   const values = await chrome.storage.local.get([
     STORAGE_KEYS.profileV2,
-    STORAGE_KEYS.profile,
-    STORAGE_KEYS.profileMarkdown,
     STORAGE_KEYS.apiConfig
   ]);
-  const profile = values[STORAGE_KEYS.profile] || DEFAULT_PROFILE;
   return {
-    profileV2: values[STORAGE_KEYS.profileV2] ? normalizeProfileV2(values[STORAGE_KEYS.profileV2]) : null,
-    profile,
-    profileMarkdown: values[STORAGE_KEYS.profileMarkdown] || "",
+    profileV2: normalizeProfileV2(values[STORAGE_KEYS.profileV2] || DEFAULT_PROFILE_V2),
     apiConfig: { ...DEFAULT_API_CONFIG, ...(values[STORAGE_KEYS.apiConfig] || {}) },
     defaults: {
       profileV2: DEFAULT_PROFILE_V2,
-      profile: DEFAULT_PROFILE,
       apiConfig: DEFAULT_API_CONFIG
     }
   };
@@ -298,16 +115,8 @@ async function getSettings() {
 async function saveSettings(payload) {
   const next = {};
 
-  if (payload.profile) {
-    next[STORAGE_KEYS.profile] = payload.profile;
-  }
-
   if (payload.profileV2) {
     next[STORAGE_KEYS.profileV2] = normalizeProfileV2(payload.profileV2);
-  }
-
-  if (typeof payload.profileMarkdown === "string") {
-    next[STORAGE_KEYS.profileMarkdown] = payload.profileMarkdown;
   }
 
   if (payload.apiConfig) {
@@ -315,14 +124,11 @@ async function saveSettings(payload) {
   }
 
   await chrome.storage.local.set(next);
-  if (payload.profileV2) {
-    await chrome.storage.local.remove([STORAGE_KEYS.profile, STORAGE_KEYS.profileMarkdown]);
-  }
   return { saved: Object.keys(next) };
 }
 
 async function clearSettings() {
-  await chrome.storage.local.remove([STORAGE_KEYS.profileV2, STORAGE_KEYS.profile, STORAGE_KEYS.profileMarkdown, STORAGE_KEYS.apiConfig]);
+  await chrome.storage.local.clear();
   return { cleared: true };
 }
 
@@ -398,7 +204,10 @@ async function mapFields(payload) {
   try {
     const settings = await getSettings();
     const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
-    const profileCatalog = normalizeProvidedProfileCatalog(payload.profileCatalog) || buildProfileFieldCatalog(payload.profile || settings.profile);
+    const profileCatalog = normalizeProvidedProfileCatalog(payload.profileCatalog);
+    if (!profileCatalog) {
+      throw new Error("Missing profile field catalog.");
+    }
 
     const compactScan = {
       url: scan.url,
@@ -477,18 +286,28 @@ async function analyzePageStructure(payload) {
 async function testApi(payload) {
   const settings = await getSettings();
   const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
-  const fakeProfile = buildProfileFieldCatalog({
-    basic: {},
-    education: [],
-    experiences: [],
-    campus: [],
-    family: {},
-    certificates: [],
-    awards: [],
-    customFields: { basic: [] },
-    other: {},
-    declarations: {}
-  });
+  const fakeProfile = {
+    sections: [
+      {
+        key: "basic",
+        title: "基本信息",
+        fields: [
+          {
+            path: "profileV2.sections.basic.values[0]",
+            label: "基本信息 / 姓名",
+            aliases: ["姓名", "真实姓名", "基本信息"]
+          }
+        ]
+      }
+    ],
+    fields: [
+      {
+        path: "profileV2.sections.basic.values[0]",
+        label: "基本信息 / 姓名",
+        aliases: ["姓名", "真实姓名", "基本信息"]
+      }
+    ]
+  };
   const fakeScan = {
     url: "https://example.test/job",
     hostname: "example.test",
@@ -754,131 +573,11 @@ function redactPersonalValues(text, maxLength = 220) {
   return redacted.length > maxLength ? `${redacted.slice(0, maxLength)}...` : redacted;
 }
 
-function buildProfileFieldCatalog(profile) {
-  const source = isPlainObject(profile) ? profile : {};
-  const catalog = [];
-
-  addSimpleProfileFields(catalog, "basic", BASIC_FIELD_DEFS);
-  addRepeatedProfileFields(catalog, "education", "教育经历", EDUCATION_FIELD_DEFS, Math.max(1, Array.isArray(source.education) ? source.education.length : 0));
-  addRepeatedProfileFields(catalog, "experiences", "实习经历", EXPERIENCE_FIELD_DEFS, Math.max(1, Array.isArray(source.experiences) ? source.experiences.length : 0));
-  addRepeatedProfileFields(catalog, "campus", "学生社团经历", CAMPUS_FIELD_DEFS, Math.max(1, Array.isArray(source.campus) ? source.campus.length : 0));
-  addFamilyProfileFields(catalog, "family.father", "父亲", FAMILY_FIELD_DEFS);
-  addFamilyProfileFields(catalog, "family.mother", "母亲", FAMILY_FIELD_DEFS);
-  addRepeatedProfileFields(catalog, "certificates", "证书信息", CERTIFICATE_FIELD_DEFS, Math.max(1, Array.isArray(source.certificates) ? source.certificates.length : 0));
-  addRepeatedProfileFields(catalog, "awards", "奖惩信息", AWARD_FIELD_DEFS, Math.max(1, Array.isArray(source.awards) ? source.awards.length : 0));
-  addSimpleProfileFields(catalog, "other", OTHER_FIELD_DEFS);
-  addSimpleProfileFields(catalog, "declarations", DECLARATION_FIELD_DEFS);
-  addCustomProfileFields(catalog, source.customFields);
-
-  return {
-    sections: [
-      {
-        key: "basic",
-        title: "基本信息",
-        fields: catalog.filter((item) => item.path.startsWith("basic."))
-      },
-      {
-        key: "education",
-        title: "教育经历",
-        fields: catalog.filter((item) => item.path.startsWith("education["))
-      },
-      {
-        key: "experiences",
-        title: "实习经历 / 项目实践",
-        fields: catalog.filter((item) => item.path.startsWith("experiences["))
-      },
-      {
-        key: "campus",
-        title: "学生社团经历",
-        fields: catalog.filter((item) => item.path.startsWith("campus["))
-      },
-      {
-        key: "family",
-        title: "家庭及社会关系",
-        fields: catalog.filter((item) => item.path.startsWith("family."))
-      },
-      {
-        key: "certificates",
-        title: "证书信息",
-        fields: catalog.filter((item) => item.path.startsWith("certificates["))
-      },
-      {
-        key: "awards",
-        title: "奖惩信息",
-        fields: catalog.filter((item) => item.path.startsWith("awards["))
-      },
-      {
-        key: "other",
-        title: "其他信息",
-        fields: catalog.filter((item) => item.path.startsWith("other."))
-      },
-      {
-        key: "declarations",
-        title: "有关声明",
-        fields: catalog.filter((item) => item.path.startsWith("declarations."))
-      },
-      {
-        key: "customFields",
-        title: "自定义字段",
-        fields: catalog.filter((item) => item.path.startsWith("customFields."))
-      }
-    ],
-    fields: catalog
-  };
-}
-
-function addSimpleProfileFields(catalog, prefix, defs) {
-  for (const [key, label, aliases] of defs) {
-    catalog.push({
-      path: `${prefix}.${key}`,
-      label,
-      aliases: Array.isArray(aliases) ? aliases : [aliases]
-    });
-  }
-}
-
-function addRepeatedProfileFields(catalog, prefix, sectionLabel, defs, count) {
-  const itemCount = Math.max(1, Math.min(Number(count) || 0, 5));
-  for (let index = 0; index < itemCount; index += 1) {
-    for (const [key, label, aliases] of defs) {
-      catalog.push({
-        path: `${prefix}[${index}].${key}`,
-        label: `${sectionLabel} ${index + 1} ${label}`,
-        aliases: Array.isArray(aliases) ? aliases : [aliases]
-      });
-    }
-  }
-}
-
-function addFamilyProfileFields(catalog, prefix, roleLabel, defs) {
-  for (const [key, label, aliases] of defs) {
-    catalog.push({
-      path: `${prefix}.${key}`,
-      label: `${roleLabel}${label}`,
-      aliases: Array.isArray(aliases) ? aliases : [aliases]
-    });
-  }
-}
-
-function addCustomProfileFields(catalog, customFields) {
-  const basicFields = Array.isArray(customFields?.basic) ? customFields.basic : [];
-  for (let index = 0; index < basicFields.length; index += 1) {
-    const item = basicFields[index] || {};
-    const label = sanitizePromptText(item.label || item.key || `自定义字段${index + 1}`, 120);
-    const key = sanitizeAttributeText(item.key || "");
-    catalog.push({
-      path: `customFields.basic[${index}].value`,
-      label,
-      aliases: [label, key].filter(Boolean)
-    });
-  }
-}
-
 function buildMessages(profileCatalog, scan) {
   const systemPrompt = [
     "You are a form-field mapping engine for job application forms.",
     "Your only task is to map detected web form fields to local resume profile source paths.",
-    "Return strict JSON only. Do not include markdown or explanations outside JSON.",
+    "Return strict JSON only. Do not include prose or explanations outside JSON.",
     "Privacy rule: you are not given the user's actual resume values, and you must not ask for, infer, copy, or output personal values.",
     "The profile field catalog contains sourcePath names and field labels only. All real values are withheld and will be resolved locally in the browser.",
     "Do not map file upload fields. Do not decide to submit the form.",
@@ -934,7 +633,7 @@ function buildPageStructureMessages(scan) {
   const systemPrompt = [
     "You are a page-structure analyzer for job application forms.",
     "Your task is to normalize noisy detected web form metadata into readable form-field hints.",
-    "Return strict JSON only. Do not include markdown or explanations outside JSON.",
+    "Return strict JSON only. Do not include prose or explanations outside JSON.",
     "Privacy rule: the page may already contain user-entered values in nearby text, so never copy, infer, or output personal values.",
     "Only output structural labels, section names, control kind hints, and short non-sensitive notes.",
     "Do not decide to submit the form and do not map to a resume profile."
