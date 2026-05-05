@@ -511,13 +511,8 @@
     };
   }
 
-  function goAssistantHome() {
-    draftViewActive = false;
-    activeCheatsheetCategory = "";
-    sidebarFilter = "";
-    renderAssistantPanel();
-    setAssistantStatus("已返回主页。");
-    scheduleAssistantStateSave({
+  function getAssistantStateSnapshot() {
+    return {
       assistantVisible,
       assistantCollapsed,
       sidebarFilter,
@@ -525,7 +520,20 @@
       draftViewActive,
       currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
       draftSelectedIds: Array.from(draftSelectedIds)
-    });
+    };
+  }
+
+  function queueAssistantStateSave() {
+    scheduleAssistantStateSave(getAssistantStateSnapshot());
+  }
+
+  function goAssistantHome() {
+    draftViewActive = false;
+    activeCheatsheetCategory = "";
+    sidebarFilter = "";
+    renderAssistantPanel();
+    setAssistantStatus("已返回主页。");
+    queueAssistantStateSave();
   }
 
   function sendRuntimeMessage(message) {
@@ -2324,15 +2332,7 @@
     if (assistantVisible) {
       renderAssistantPanel();
     }
-    scheduleAssistantStateSave({
-      assistantVisible,
-      assistantCollapsed,
-      sidebarFilter,
-      activeCheatsheetCategory,
-      draftViewActive,
-      currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-      draftSelectedIds: Array.from(draftSelectedIds)
-    });
+    queueAssistantStateSave();
   }
 
   function showAssistant() {
@@ -2340,33 +2340,10 @@
     void refreshCurrentProfile();
   }
 
-  function hideAssistant() {
-    assistantVisible = false;
-    const panel = ensureAssistantPanel();
-    panel.setAttribute(PANEL_HIDDEN_ATTR, "true");
-    scheduleAssistantStateSave({
-      assistantVisible,
-      assistantCollapsed,
-      sidebarFilter,
-      activeCheatsheetCategory,
-      draftViewActive,
-      currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-      draftSelectedIds: Array.from(draftSelectedIds)
-    });
-  }
-
   function toggleAssistantCollapsed() {
     assistantCollapsed = !assistantCollapsed;
     renderAssistantPanel();
-    scheduleAssistantStateSave({
-      assistantVisible,
-      assistantCollapsed,
-      sidebarFilter,
-      activeCheatsheetCategory,
-      draftViewActive,
-      currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-      draftSelectedIds: Array.from(draftSelectedIds)
-    });
+    queueAssistantStateSave();
   }
 
   function ensureAssistantPanel() {
@@ -2419,7 +2396,7 @@
     closeBtn.type = "button";
     closeBtn.className = "arf-close";
     closeBtn.textContent = "×";
-    closeBtn.addEventListener("click", hideAssistant);
+    closeBtn.addEventListener("click", () => setAssistantVisible(false));
     headerActions.append(collapseBtn, homeBtn, closeBtn);
     header.append(titleWrap, headerActions);
 
@@ -2435,15 +2412,7 @@
       sidebarFilter = normalizeText(searchInput.value || "", 80);
       activeCheatsheetCategory = "";
       renderQuickCopyList(panel);
-      scheduleAssistantStateSave({
-        assistantVisible,
-        assistantCollapsed,
-        sidebarFilter,
-        activeCheatsheetCategory,
-        draftViewActive,
-        currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-        draftSelectedIds: Array.from(draftSelectedIds)
-      });
+      queueAssistantStateSave();
     });
 
     const content = document.createElement("div");
@@ -4089,15 +4058,7 @@
       activeCheatsheetCategory = "";
       sidebarFilter = "";
       renderAssistantPanel();
-      await persistAssistantState({
-        assistantVisible,
-        assistantCollapsed,
-        sidebarFilter,
-        activeCheatsheetCategory,
-        draftViewActive,
-        currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-        draftSelectedIds: Array.from(draftSelectedIds)
-      });
+      await persistAssistantState(getAssistantStateSnapshot());
 
       const selectedCount = draftSelectedIds.size;
       setAssistantStatus(
@@ -4196,15 +4157,7 @@
       draftSelectedIds.delete(id);
     }
     updateDraftActionButtonState();
-    scheduleAssistantStateSave({
-      assistantVisible,
-      assistantCollapsed,
-      sidebarFilter,
-      activeCheatsheetCategory,
-      draftViewActive,
-      currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-      draftSelectedIds: Array.from(draftSelectedIds)
-    });
+    queueAssistantStateSave();
   }
 
   function updateDraftActionButtonState() {
@@ -4253,15 +4206,7 @@
       draftViewActive = false;
       renderAssistantPanel();
       setAssistantStatus("已返回主页。");
-      scheduleAssistantStateSave({
-        assistantVisible,
-        assistantCollapsed,
-        sidebarFilter,
-        activeCheatsheetCategory,
-        draftViewActive,
-        currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-        draftSelectedIds: Array.from(draftSelectedIds)
-      });
+      queueAssistantStateSave();
     });
 
     titleRow.append(titleWrap, back);
@@ -4410,15 +4355,7 @@
       total: currentAutofillDraft?.candidates?.length || results.length,
       message: `页面已标记：绿色为已填写，黄色为需确认，红色为失败。`
     });
-    await persistAssistantState({
-      assistantVisible,
-      assistantCollapsed,
-      sidebarFilter,
-      activeCheatsheetCategory,
-      draftViewActive,
-      currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-      draftSelectedIds: Array.from(draftSelectedIds)
-    });
+    await persistAssistantState(getAssistantStateSnapshot());
     return {
       ok: true,
       attempted: results.length,
@@ -4899,15 +4836,7 @@
       button.addEventListener("click", () => {
         activeCheatsheetCategory = section.category;
         renderAssistantPanel();
-        scheduleAssistantStateSave({
-          assistantVisible,
-          assistantCollapsed,
-          sidebarFilter,
-          activeCheatsheetCategory,
-          draftViewActive,
-          currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-          draftSelectedIds: Array.from(draftSelectedIds)
-        });
+        queueAssistantStateSave();
       });
       overview.append(button);
     }
@@ -4926,12 +4855,7 @@
     root.append(head);
 
     for (const section of sections) {
-      const narrowed = {
-        ...section,
-        category: section.category,
-        items: section.items
-      };
-      renderCheatsheetSectionRows(root, narrowed, { compactTitle: true });
+      renderCheatsheetSectionRows(root, section, { compactTitle: true });
     }
   }
 
@@ -4946,15 +4870,7 @@
     back.addEventListener("click", () => {
       activeCheatsheetCategory = "";
       renderAssistantPanel();
-      scheduleAssistantStateSave({
-        assistantVisible,
-        assistantCollapsed,
-        sidebarFilter,
-        activeCheatsheetCategory,
-        draftViewActive,
-        currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-        draftSelectedIds: Array.from(draftSelectedIds)
-      });
+      queueAssistantStateSave();
     });
 
     const title = document.createElement("div");
