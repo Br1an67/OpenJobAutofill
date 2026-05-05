@@ -1,5 +1,5 @@
 (() => {
-  const SCRIPT_VERSION = "0.7.4-floating-autofill";
+  const SCRIPT_VERSION = "0.8.1-cleanup";
 
   if (window.__AI_RESUME_AUTOFILL_VERSION__ === SCRIPT_VERSION) {
     return;
@@ -338,14 +338,6 @@
     首选工作地点: ["第一工作地点", "意向工作地点"],
     首选工作地点是否接受调剂: ["工作地点是否接受调剂", "地点调剂"]
   };
-
-  const GENERIC_NO_LABELS = [
-    "您是否参加了参加过任何非法组织或团体",
-    "您是否患重大疾病或有家族遗传病史",
-    "您是否涉嫌违规违纪违法犯罪接受纪检监察检察公安等行政执法机关等谈话询问讯问处罚情况",
-    "您本人及家庭成员有无外国国籍及境外居留权是否被司法机关追诉被监察机关留置或被列为失信被执行人",
-    "是否有创业经商办企业或持有未上市企业股权的投资情况"
-  ];
 
   function normalizeText(value, maxLength = 260) {
     const text = String(value || "")
@@ -5398,19 +5390,10 @@
   }
 
   async function handleContentMessage(message) {
-    if (message.type === "AI_RESUME_SCAN_FORM") {
-      return scanForm();
-    }
-
     if (message.type === "AI_RESUME_SHOW_FIELD_ASSISTANT") {
       showAssistant();
       renderAssistantPanel();
       return { visible: true };
-    }
-
-    if (message.type === "AI_RESUME_HIDE_FIELD_ASSISTANT") {
-      hideAssistant();
-      return { visible: false };
     }
 
     if (message.type === "AI_RESUME_START_AUTOFILL") {

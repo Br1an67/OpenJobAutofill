@@ -1,5 +1,4 @@
 const els = {
-  repoLink: document.getElementById("repoLink"),
   status: document.getElementById("status"),
   openOptions: document.getElementById("openOptions"),
   startAutofillBtn: document.getElementById("startAutofillBtn"),
@@ -7,14 +6,9 @@ const els = {
   clearMarksBtn: document.getElementById("clearMarksBtn")
 };
 
-const REPO_URL = "https://github.com/Br1an67/OpenJobAutofill";
 const DEFAULT_START_LABEL = els.startAutofillBtn.textContent;
 
 els.openOptions.addEventListener("click", () => chrome.runtime.openOptionsPage());
-els.repoLink.addEventListener("click", (event) => {
-  event.preventDefault();
-  chrome.tabs.create({ url: REPO_URL });
-});
 els.startAutofillBtn.addEventListener("click", () => {
   void startAutofill();
 });

@@ -62,8 +62,7 @@ h2 {
 }
 
 p,
-.muted,
-.meta {
+.muted {
   color: var(--muted);
 }
 
@@ -136,82 +135,11 @@ button.ghost.full {
   min-height: 38px;
 }
 
-.confirm {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 8px 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.confirm input {
-  width: auto;
-  margin-top: 2px;
-}
-
-.split {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 8px 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.split input {
-  width: 76px;
-  padding: 7px 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-}
-
 #status {
   min-height: 20px;
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
-}
-
-.mapping-list {
-  display: grid;
-  gap: 8px;
-  max-height: 230px;
-  overflow: auto;
-}
-
-.mapping-list.empty {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.mapping-card {
-  padding: 9px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: #fff;
-}
-
-.mapping-card strong {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
-}
-
-.mapping-card .meta {
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.confidence {
-  display: inline-block;
-  min-width: 42px;
-  margin-left: 4px;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
 }
 
 .error {

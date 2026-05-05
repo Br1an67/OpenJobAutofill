@@ -27,7 +27,6 @@ const STORAGE_KEYS = {
   apiConfig: "apiConfig"
 };
 
-const POPUP_STATE_KEY = "AI_RESUME_POPUP_STATE";
 const ASSISTANT_STATE_KEY = "AI_RESUME_ASSISTANT_STATE";
 const MAX_ASSISTANT_STATE_ITEMS = 20;
 
@@ -90,7 +89,6 @@ async function handleMessage(message) {
     case "AI_RESUME_LIST_MODELS":
       return listModels(message.payload || {});
     case "AI_RESUME_TEST_CONNECTION":
-    case "AI_RESUME_TEST_API":
       return testApi(message.payload || {});
     default:
       throw new Error(`Unknown message type: ${message.type}`);
@@ -130,26 +128,6 @@ async function saveSettings(payload) {
 async function clearSettings() {
   await chrome.storage.local.clear();
   return { cleared: true };
-}
-
-async function savePopupSessionState(pageKey, patch) {
-  if (!pageKey || !chrome.storage.session) {
-    return;
-  }
-
-  try {
-    const result = await chrome.storage.session.get(POPUP_STATE_KEY);
-    const allStates = result[POPUP_STATE_KEY] || {};
-    allStates[pageKey] = {
-      ...(allStates[pageKey] || {}),
-      pageKey,
-      ...patch,
-      updatedAt: Date.now()
-    };
-    await chrome.storage.session.set({ [POPUP_STATE_KEY]: allStates });
-  } catch {
-    // Session state is only for popup continuity; API mapping should not fail if it cannot be cached.
-  }
 }
 
 async function saveAssistantState(payload) {
@@ -198,63 +176,33 @@ async function mapFields(payload) {
     throw new Error("Missing scan result. Scan the current form first.");
   }
 
-  const pageKey = String(payload.pageKey || "");
-  const pageInfo = `${scan.hostname || "当前页面"}，发现 ${scan.fields.length} 个可见字段`;
-
-  try {
-    const settings = await getSettings();
-    const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
-    const profileCatalog = normalizeProvidedProfileCatalog(payload.profileCatalog);
-    if (!profileCatalog) {
-      throw new Error("Missing profile field catalog.");
-    }
-
-    const compactScan = {
-      url: scan.url,
-      hostname: scan.hostname,
-      title: scan.title,
-      fields: scan.fields.map(compactField)
-    };
-
-    await savePopupSessionState(pageKey, {
-      pageInfo,
-      lastScan: compactScan,
-      lastMappings: [],
-      status: "正在调用 AI 生成字段映射...",
-      statusIsError: false
-    });
-
-    const messages = buildMessages(profileCatalog, compactScan);
-    const rawContent = await callAi(apiConfig, messages, {
-      profile: profileCatalog,
-      profileCatalog,
-      scan: compactScan
-    });
-    const parsed = parseJsonFromText(rawContent);
-    const mappings = annotateMappingsWithCatalog(normalizeAiMappings(parsed, compactScan.fields), profileCatalog);
-    const result = {
-      mappings,
-      notes: Array.isArray(parsed?.notes) ? parsed.notes : [],
-      raw: parsed
-    };
-
-    await savePopupSessionState(pageKey, {
-      pageInfo,
-      lastScan: compactScan,
-      lastMappings: mappings,
-      status: `AI 映射完成：${mappings.length} 个字段。先看预览，再填充。`,
-      statusIsError: false
-    });
-
-    return result;
-  } catch (error) {
-    await savePopupSessionState(pageKey, {
-      pageInfo,
-      status: `AI 映射失败：${error instanceof Error ? error.message : String(error)}`,
-      statusIsError: true
-    });
-    throw error;
+  const settings = await getSettings();
+  const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
+  const profileCatalog = normalizeProvidedProfileCatalog(payload.profileCatalog);
+  if (!profileCatalog) {
+    throw new Error("Missing profile field catalog.");
   }
+
+  const compactScan = {
+    url: scan.url,
+    hostname: scan.hostname,
+    title: scan.title,
+    fields: scan.fields.map(compactField)
+  };
+
+  const messages = buildMessages(profileCatalog, compactScan);
+  const rawContent = await callAi(apiConfig, messages, {
+    profile: profileCatalog,
+    profileCatalog,
+    scan: compactScan
+  });
+  const parsed = parseJsonFromText(rawContent);
+  const mappings = annotateMappingsWithCatalog(normalizeAiMappings(parsed, compactScan.fields), profileCatalog);
+  return {
+    mappings,
+    notes: Array.isArray(parsed?.notes) ? parsed.notes : [],
+    raw: parsed
+  };
 }
 
 async function analyzePageStructure(payload) {
