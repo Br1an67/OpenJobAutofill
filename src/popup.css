@@ -67,9 +67,10 @@ p,
   color: var(--muted);
 }
 
-#pageInfo {
+.repo-note {
   margin-top: 4px;
   font-size: 12px;
+  line-height: 1.45;
 }
 
 .repo-link {

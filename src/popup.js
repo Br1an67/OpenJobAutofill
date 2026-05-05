@@ -1,5 +1,4 @@
 const els = {
-  pageInfo: document.getElementById("pageInfo"),
   repoLink: document.getElementById("repoLink"),
   status: document.getElementById("status"),
   openOptions: document.getElementById("openOptions"),
@@ -30,10 +29,6 @@ initialize();
 
 async function initialize() {
   try {
-    const tab = await getActiveTab();
-    if (tab?.url) {
-      els.pageInfo.textContent = normalizePageLabel(tab.url);
-    }
     setStatus("点击开始填写后会在页面右下角显示进度，并直接用绿/黄/红框标记结果。");
     await syncRuntimeState();
   } catch (error) {
@@ -152,14 +147,6 @@ async function sendToActiveTab(message) {
   }
 }
 
-function getActiveTab() {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      resolve(tabs?.[0] || null);
-    });
-  });
-}
-
 function queryTabs(query) {
   return new Promise((resolve) => {
     chrome.tabs.query(query, resolve);
@@ -194,13 +181,4 @@ function sendTabMessage(tabId, message) {
       resolve(response);
     });
   });
-}
-
-function normalizePageLabel(url) {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.hostname}${parsed.pathname || ""}`;
-  } catch {
-    return String(url);
-  }
 }
