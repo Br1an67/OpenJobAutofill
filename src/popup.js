@@ -23,7 +23,7 @@ initialize();
 
 async function initialize() {
   try {
-    setStatus("点击开始填写后会在页面右下角显示进度，并直接用绿/黄/红框标记结果。");
+    setStatus("点击开始填写后会先扫描页面；如果已配置 API，AI 会在页面结构分析和字段映射阶段参与，但不会接收简历具体值。");
     await syncRuntimeState();
   } catch (error) {
     setStatus(`读取页面失败：${error.message}`, true);
@@ -55,7 +55,10 @@ function applyRuntimeState(state = {}, options = {}) {
     const percent = Number.isFinite(Number(progress.percent))
       ? `${Math.max(0, Math.min(100, Math.round(progress.percent)))}%`
       : "";
-    setStatus(`当前正在 ${stage}${percent ? `（${percent}）` : ""}，请勿重复点击。页面右下角会显示进度。`);
+    const aiNote = /^AI\s/.test(stage)
+      ? " 这是 AI 分析/映射阶段，资料值不会发送。"
+      : " 如果已配置 API，AI 只会在分析和映射阶段参与。";
+    setStatus(`当前正在 ${stage}${percent ? `（${percent}）` : ""}，请勿重复点击。页面右下角会显示进度。${aiNote}`);
     return;
   }
 
@@ -79,19 +82,19 @@ async function startAutofill() {
   try {
     els.startAutofillBtn.disabled = true;
     els.startAutofillBtn.textContent = "扫描中...";
-    setStatus("正在开始填写...");
+    setStatus("正在开始填写；如果已配置 API，AI 会在分析和映射阶段参与。");
     const response = await sendToActiveTab({ type: "AI_RESUME_START_AUTOFILL" });
     const data = response?.data || {};
     if (data.ok) {
       if (data.filled != null) {
-        setStatus(`已完成一键填写：成功 ${data.filled || 0} 项，需确认 ${data.skipped || 0} 项，失败 ${data.failed || 0} 项。`);
+        setStatus(`已完成一键填写：成功 ${data.filled || 0} 项，需确认 ${data.skipped || 0} 项，失败 ${data.failed || 0} 项。AI 只在分析和映射阶段参与，写入阶段为本地执行。`);
       } else {
-        setStatus("已生成草稿。页面上的黄色标记需要人工确认，也可以点“查看详情”。");
+        setStatus("已生成草稿。页面上的黄色标记需要人工确认，也可以点“查看详情”。如果已配置 API，AI 只在分析和映射阶段参与。");
       }
     } else if (data.reason === "cancelled") {
       setStatus("已取消写入。");
     } else if (data.reason === "no candidates") {
-      setStatus("没有找到高置信度可直填字段。页面上的黄色标记需要人工确认，也可以点“查看详情”。");
+      setStatus("没有找到高置信度可直填字段。页面上的黄色标记需要人工确认，也可以点“查看详情”。如果已配置 API，AI 只在分析和映射阶段参与。");
     } else if (data.reason === "busy") {
       setStatus("当前已有扫描任务在运行，请稍候。", true);
     } else if (data.reason) {

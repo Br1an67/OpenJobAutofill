@@ -109,30 +109,6 @@
     }
   ];
 
-  const CHEATSHEET_CATEGORY_ORDER = [
-    "基本信息",
-    "求职意向",
-    "教育经历",
-    "实习经历",
-    "工作经历",
-    "项目经历",
-    "社团工作",
-    "学生工作",
-    "奖惩情况",
-    "外语能力",
-    "计算机技能",
-    "证书技能",
-    "语言能力",
-    "家庭信息",
-    "培训经历",
-    "论文著作",
-    "专利成果",
-    "自我描述",
-    "其他信息",
-    "有关声明",
-    "自定义资料"
-  ];
-
   const AUTO_FILL_SECTION_ORDER = [
     "基本信息",
     "求职意向",
@@ -1502,6 +1478,19 @@
         font-size: 11px;
         line-height: 1.45;
       }
+      #${FLOAT_ID} .arf-float-ai {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(15, 107, 79, 0.12);
+        color: #0f6b4f;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
       #${FLOAT_ID} .arf-float-close {
         width: 26px;
         min-width: 26px;
@@ -2051,6 +2040,7 @@
         <button class="arf-float-close" type="button" data-action="float-hide" title="隐藏">×</button>
       </div>
       <div class="arf-float-privacy">隐私：AI 不接收资料值；资料只保存在本机；插件不会自动提交。</div>
+      <div class="arf-float-ai" data-role="float-ai" hidden>AI 正在分析页面字段</div>
       <div class="arf-float-progress" data-role="float-progress">
         <div class="arf-float-track">
           <div class="arf-float-fill" data-role="float-fill"></div>
@@ -2099,9 +2089,11 @@
 
     const title = floating.querySelector('[data-role="float-title"]');
     const detail = floating.querySelector('[data-role="float-detail"]');
+    const aiFlag = floating.querySelector('[data-role="float-ai"]');
     const progress = floating.querySelector('[data-role="float-progress"]');
     const fill = floating.querySelector('[data-role="float-fill"]');
     const chips = floating.querySelector('[data-role="float-chips"]');
+    const aiActive = Boolean(autofillProgress.active && /^AI\s/.test(autofillProgress.stage || ""));
 
     if (autofillProgress.active) {
       if (title) {
@@ -2119,6 +2111,12 @@
       if (chips) {
         chips.hidden = true;
         chips.textContent = "";
+      }
+      if (aiFlag) {
+        aiFlag.hidden = !aiActive;
+        if (aiActive) {
+          aiFlag.textContent = `${autofillProgress.stage || "AI 分析"} · 只发送字段目录，不发送资料值`;
+        }
       }
       return;
     }
@@ -2140,6 +2138,10 @@
         <div class="arf-float-chip is-warn"><strong>${summary.skipped || 0}</strong>需确认</div>
         <div class="arf-float-chip is-error"><strong>${summary.failed || 0}</strong>失败</div>
       `;
+    }
+    if (aiFlag) {
+      aiFlag.hidden = true;
+      aiFlag.textContent = "AI 正在分析页面字段";
     }
   }
 
@@ -2462,19 +2464,6 @@
     return text;
   }
 
-  function sortCheatsheetSections(sections) {
-    return sections.slice().sort((a, b) => {
-      const left = CHEATSHEET_CATEGORY_ORDER.indexOf(a.category);
-      const right = CHEATSHEET_CATEGORY_ORDER.indexOf(b.category);
-      const leftRank = left === -1 ? 999 : left;
-      const rightRank = right === -1 ? 999 : right;
-      if (leftRank !== rightRank) {
-        return leftRank - rightRank;
-      }
-      return a.category.localeCompare(b.category, "zh-CN");
-    });
-  }
-
   function getCurrentProfileSections() {
     return profileV2ToCheatsheetSections(currentProfileV2);
   }
@@ -2514,7 +2503,7 @@
       appendProfileV2Section(sections, section.key || `custom-${index}`, section);
     }
 
-    return sortCheatsheetSections(sections)
+    return sections
       .map((section) => ({
         ...section,
         items: section.items.filter((item) => item.label)
@@ -2569,6 +2558,17 @@
       section.sourceTitles.push(sourceTitle);
     }
     return section;
+  }
+
+  function getCheatsheetSectionTitle(section) {
+    if (!section) {
+      return "";
+    }
+
+    const sourceTitle = Array.isArray(section.sourceTitles)
+      ? section.sourceTitles.find((title) => Boolean(normalizeText(title, 120)))
+      : "";
+    return normalizeText(sourceTitle || section.category || "", 120);
   }
 
   function appendProfileV2Values(section, values, context) {
@@ -4637,6 +4637,7 @@
     overview.className = "arf-overview";
 
     for (const section of sections) {
+      const displayTitle = getCheatsheetSectionTitle(section);
       const button = document.createElement("button");
       button.type = "button";
       button.className = "arf-category-card";
@@ -4645,7 +4646,7 @@
       const main = document.createElement("div");
       const title = document.createElement("div");
       title.className = "arf-category-title";
-      title.textContent = section.category;
+      title.textContent = displayTitle;
       const note = document.createElement("div");
       note.className = "arf-category-note";
       note.textContent = summarizeCheatsheetSection(section);
@@ -4696,7 +4697,7 @@
 
     const title = document.createElement("div");
     title.className = "arf-detail-title";
-    title.textContent = `${section.category} · ${section.items.length} 条`;
+    title.textContent = `${getCheatsheetSectionTitle(section) || section.category} · ${section.items.length} 条`;
     head.append(back, title);
     root.append(head);
 
@@ -4711,7 +4712,7 @@
 
       const subtitle = document.createElement("div");
       subtitle.className = "arf-subsection-title";
-      subtitle.textContent = group.subsection || (options.compactTitle ? section.category : "详情");
+      subtitle.textContent = group.subsection || (options.compactTitle ? getCheatsheetSectionTitle(section) || section.category : "详情");
       card.append(subtitle);
 
       for (const item of group.items) {
@@ -4767,14 +4768,15 @@
 
     try {
       await copyTextToClipboard(formatCheatsheetSectionForCopy(section));
-      setAssistantStatus(`已复制：${section.category}`);
+      setAssistantStatus(`已复制：${getCheatsheetSectionTitle(section) || section.category}`);
     } catch (error) {
       setAssistantStatus(`复制失败：${error.message}`, true);
     }
   }
 
   function formatCheatsheetSectionForCopy(section) {
-    const lines = [`## ${section.category}`];
+    const title = getCheatsheetSectionTitle(section) || section.category;
+    const lines = [`## ${title}`];
     for (const group of groupItemsBySubsection(section.items)) {
       if (group.subsection) {
         lines.push("", `### ${group.subsection}`);
@@ -4850,7 +4852,7 @@
         status.textContent = `${adapterLabel}草稿模式：已匹配 ${currentAutofillDraft.candidates.length} 项，已勾选 ${selectedCount} 项。`;
       } else {
         status.textContent = activeSection
-          ? `${adapterLabel}正在查看：${activeSection.category}。内容可直接选中复制。`
+          ? `${adapterLabel}正在查看：${getCheatsheetSectionTitle(activeSection) || activeSection.category}。内容可直接选中复制。`
           : totalItems > 0
             ? `${adapterLabel}已加载 ${sections.length} 个分类、${totalItems} 条本地资料。`
             : `${adapterLabel}资料只从本机读取。`;

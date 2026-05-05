@@ -43,6 +43,10 @@ select {
   margin-bottom: 14px;
 }
 
+.topbar > div {
+  min-width: 0;
+}
+
 h1,
 h2,
 p {
@@ -131,6 +135,12 @@ button.ghost {
 button.ghost.full {
   width: 100%;
   min-height: 38px;
+}
+
+#openOptions {
+  flex: 0 0 auto;
+  min-width: 58px;
+  white-space: nowrap;
 }
 
 #status {

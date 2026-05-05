@@ -16,6 +16,32 @@
         </div>
       </header>
 
+      <section class="onboarding-guide card" aria-label="首次使用步骤">
+        <div>
+          <p class="eyebrow">首次使用</p>
+          <h2>三步开始网申填写</h2>
+        </div>
+        <div class="onboarding-flow">
+          <ol class="onboarding-steps">
+            <li>
+              <strong>填写资料</strong>
+              <span>先在下面按模块维护本机简历资料。</span>
+            </li>
+            <li>
+              <strong>保存资料</strong>
+              <span>点击底部“保存资料”，看到浮层提示后就已保存到本机。</span>
+            </li>
+            <li>
+              <strong>开始填写</strong>
+              <span>打开招聘表单页，点击插件图标里的“开始填写”。</span>
+            </li>
+          </ol>
+          <p class="optional-api-note">
+            AI 页面分析是可选增强：如果希望模型辅助理解表单字段，再到下方 API 设置填写 API Key、Base URL 和模型名，并点击“测试连接”。不配置 API 时仍可使用本地规则填写。
+          </p>
+        </div>
+      </section>
+
       <section class="resume-workbench">
         <aside class="resume-nav card">
           <div class="side-title">资料目录</div>
@@ -37,6 +63,7 @@
             <button id="resetProfile" class="ghost" type="button">恢复模板</button>
             <button id="clearLocalData" class="ghost danger" type="button">清空本地数据</button>
           </div>
+          <p id="profileFeedback" class="profile-feedback" aria-live="polite">资料加载后，编辑任意字段会在这里提示是否需要保存。</p>
           <input id="profileFileInput" type="file" accept="application/json,.json" hidden />
         </section>
 
@@ -159,6 +186,7 @@
         <pre id="status">正在加载...</pre>
       </section>
     </main>
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
     <script src="./options.js"></script>
   </body>

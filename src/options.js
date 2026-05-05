@@ -13,18 +13,22 @@ const fields = {
   customHeadersJson: document.getElementById("customHeadersJson"),
   customBodyTemplate: document.getElementById("customBodyTemplate"),
   customResponsePath: document.getElementById("customResponsePath"),
+  saveProfileButton: document.getElementById("saveProfile"),
   profileSectionEditor: document.getElementById("profileSectionEditor"),
   profileNav: document.getElementById("profileNav"),
   profileTips: document.getElementById("profileTips"),
   profileFileInput: document.getElementById("profileFileInput"),
+  profileFeedback: document.getElementById("profileFeedback"),
   apiFeedback: document.getElementById("apiFeedback"),
   apiPreviewBox: document.getElementById("apiPreviewBox"),
   apiPreview: document.getElementById("apiPreview"),
+  toast: document.getElementById("toast"),
   status: document.getElementById("status")
 };
 
 const PROFILE_SCHEMA_VERSION = 2;
 const PROFILE_BACKUP_FORMAT = "OpenJobAutofillProfileBackup";
+const SAVE_PROFILE_LABEL = fields.saveProfileButton?.textContent || "保存资料";
 
 const RESUME_SECTION_GUIDE = [
   {
@@ -410,6 +414,9 @@ const STRUCTURED_RESUME_SECTIONS = [
 
 let activeProfileSectionKey = "";
 let profileSectionSyncFrame = 0;
+let profileHasUnsavedChanges = false;
+let profileSaveFeedbackTimer = 0;
+let toastTimer = 0;
 
 document.getElementById("settingsForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -417,7 +424,7 @@ document.getElementById("settingsForm").addEventListener("submit", async (event)
 });
 document.getElementById("refreshModels").addEventListener("click", refreshModelList);
 document.getElementById("testConnection").addEventListener("click", testConnection);
-document.getElementById("saveProfile").addEventListener("click", saveProfile);
+fields.saveProfileButton.addEventListener("click", saveProfile);
 document.getElementById("exportProfile").addEventListener("click", exportProfile);
 document.getElementById("importProfile").addEventListener("click", () => fields.profileFileInput.click());
 document.getElementById("resetProfile").addEventListener("click", resetProfile);
@@ -444,6 +451,15 @@ window.addEventListener("resize", scheduleProfileSectionSync);
 
 loadSettings();
 
+window.addEventListener("beforeunload", (event) => {
+  if (!profileHasUnsavedChanges) {
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = "";
+});
+
 async function loadSettings() {
   try {
     const settings = await sendRuntimeMessage({ type: "AI_RESUME_GET_SETTINGS" });
@@ -451,6 +467,7 @@ async function loadSettings() {
     renderProfileNav();
     renderProfileTips(RESUME_SECTION_GUIDE[0]?.key);
     renderProfileSectionEditor(getProfileV2FromSettings(settings));
+    setProfileSaved("资料已加载，当前没有未保存修改。");
     scheduleProfileSectionSync();
     updateModeBlocks();
     setStatus("设置已加载。");
@@ -498,30 +515,58 @@ function collectApiConfig() {
 async function saveApiSettings() {
   try {
     const apiConfig = collectApiConfig();
+    let apiPermissionGranted = true;
+    let apiPermissionError = "";
+    try {
+      apiPermissionGranted = await ensureApiHostPermissions(apiConfig, { prompt: true });
+    } catch (error) {
+      apiPermissionGranted = false;
+      apiPermissionError = error.message;
+    }
+
     await sendRuntimeMessage({
       type: "AI_RESUME_SAVE_SETTINGS",
       payload: { apiConfig }
     });
+
+    if (!apiPermissionGranted) {
+      const reason = apiPermissionError ? `：${apiPermissionError}` : "，测试连接时可以重新授权。";
+      setStatus(`API 设置已保存，但还没有获得 API 域名访问权限${reason}`);
+      setInlineFeedback("API 设置已保存；如需使用 AI，请在测试连接时授权 API 域名。");
+      showToast("API 设置已保存，AI 使用前还需要授权 API 域名。", "busy");
+      return;
+    }
+
     setStatus("API 设置保存成功。");
     setInlineFeedback("API 设置已保存到本机。");
+    showToast("API 设置已保存到本机。");
   } catch (error) {
     setStatus(`保存失败：${error.message}`, true);
     setInlineFeedback(`保存失败：${error.message}`, true);
+    showToast(`保存失败：${error.message}`, "error");
   }
 }
 
 async function saveProfile() {
   try {
+    setProfileSaving(true);
+    setProfileFeedback("正在保存资料...", "busy");
+    showToast("正在保存资料...", "busy", 1600);
     const profileV2 = collectProfileV2FromEditor();
     await sendRuntimeMessage({
       type: "AI_RESUME_SAVE_SETTINGS",
       payload: { profileV2 }
     });
     setStatus("简历资料保存成功，已写入本机的 chrome.storage.local。");
-    setInlineFeedback("简历资料已保存到本机。");
+    setProfileSaved("资料已保存到本机。");
+    showToast("资料已保存到本机。");
   } catch (error) {
     setStatus(`保存资料失败：${error.message}`, true);
-    setInlineFeedback(`保存资料失败：${error.message}`, true);
+    setProfileFeedback(`保存资料失败：${error.message}`, "error");
+    showToast(`保存资料失败：${error.message}`, "error");
+  }
+  finally {
+    setProfileSaving(false);
   }
 }
 
@@ -561,10 +606,12 @@ async function importProfileFromFile() {
       payload: { profileV2 }
     });
     setStatus("已导入并保存到本机。侧边栏会立即读取这份简历资料。");
-    setInlineFeedback("简历资料已保存到本机。");
+    setProfileSaved("资料已导入并保存到本机。");
+    showToast("资料已导入并保存到本机。");
   } catch (error) {
     setStatus(`导入失败：${error.message}`, true);
-    setInlineFeedback(`导入失败：${error.message}`, true);
+    setProfileFeedback(`导入失败：${error.message}`, "error");
+    showToast(`导入失败：${error.message}`, "error");
   } finally {
     fields.profileFileInput.value = "";
   }
@@ -577,6 +624,7 @@ function resetProfile() {
   }
 
   renderProfileSectionEditor(createEmptyProfileV2());
+  setProfileDirty("已恢复空白模板，记得点击保存资料。");
   setStatus("已恢复空白模板。点击保存后生效。");
 }
 
@@ -601,6 +649,11 @@ async function testConnection() {
     setStatus("正在测试连接，不会发送你的资料值...");
     setInlineFeedback("正在测试连接...");
     setApiPreview("");
+    const hasApiPermission = await ensureApiHostPermissions(apiConfig, { prompt: true });
+    if (!hasApiPermission) {
+      throw new Error("未授权 API 域名访问权限，无法测试连接。");
+    }
+
     const result = await sendRuntimeMessage({
       type: "AI_RESUME_TEST_CONNECTION",
       payload: { apiConfig }
@@ -630,6 +683,16 @@ async function refreshModelList(options = {}) {
     if (!options.silent) {
       setStatus("正在刷新模型列表...");
       setInlineFeedback("正在刷新模型列表...");
+    }
+
+    const hasApiPermission = await ensureApiHostPermissions(apiConfig, { prompt: !options.silent });
+    if (!hasApiPermission) {
+      if (!options.silent) {
+        const message = "未授权 API 域名访问权限，无法刷新模型列表。";
+        setStatus(message, true);
+        setInlineFeedback(message, true);
+      }
+      return;
     }
 
     const result = await sendRuntimeMessage({
@@ -1185,6 +1248,7 @@ function normalizePlainText(value, maxLength = 120) {
 }
 
 function handleProfileEditorInput() {
+  setProfileDirty("资料已修改，记得点击保存资料。");
   updateProfileCompletion();
 }
 
@@ -1243,6 +1307,58 @@ function updateCompletionBadge(badge, text, state) {
   badge.classList.toggle("is-good", state === "good");
   badge.classList.toggle("is-partial", state === "partial");
   badge.classList.toggle("is-empty", state === "empty");
+}
+
+function setProfileFeedback(message, state = "") {
+  if (!fields.profileFeedback) {
+    return;
+  }
+
+  if (profileSaveFeedbackTimer) {
+    window.clearTimeout(profileSaveFeedbackTimer);
+    profileSaveFeedbackTimer = 0;
+  }
+
+  fields.profileFeedback.textContent = message;
+  fields.profileFeedback.classList.toggle("is-dirty", state === "dirty");
+  fields.profileFeedback.classList.toggle("is-saved", state === "saved");
+  fields.profileFeedback.classList.toggle("error", state === "error");
+  fields.profileFeedback.classList.toggle("busy", state === "busy");
+}
+
+function setProfileSaving(isSaving) {
+  if (!fields.saveProfileButton) {
+    return;
+  }
+
+  fields.saveProfileButton.dataset.saving = isSaving ? "true" : "false";
+  updateProfileSaveButton();
+}
+
+function updateProfileSaveButton() {
+  if (!fields.saveProfileButton) {
+    return;
+  }
+
+  const isSaving = fields.saveProfileButton.dataset.saving === "true";
+  fields.saveProfileButton.disabled = isSaving;
+  fields.saveProfileButton.textContent = isSaving
+    ? "保存中..."
+    : profileHasUnsavedChanges
+      ? `${SAVE_PROFILE_LABEL}（未保存）`
+      : SAVE_PROFILE_LABEL;
+}
+
+function setProfileDirty(message = "资料已修改，记得点击保存资料。") {
+  profileHasUnsavedChanges = true;
+  updateProfileSaveButton();
+  setProfileFeedback(message, "dirty");
+}
+
+function setProfileSaved(message = "资料已保存到本机。") {
+  profileHasUnsavedChanges = false;
+  updateProfileSaveButton();
+  setProfileFeedback(message, "saved");
 }
 
 function collectProfileV2FromEditor() {
@@ -1504,6 +1620,34 @@ function setInlineFeedback(message, isError = false) {
   fields.apiFeedback.classList.toggle("error", isError);
 }
 
+function showToast(message, state = "saved", duration = 2800) {
+  if (!fields.toast) {
+    return;
+  }
+
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
+    toastTimer = 0;
+  }
+
+  fields.toast.textContent = message;
+  fields.toast.hidden = false;
+  fields.toast.classList.toggle("error", state === "error");
+  fields.toast.classList.toggle("busy", state === "busy");
+
+  window.requestAnimationFrame(() => {
+    fields.toast.classList.add("is-visible");
+  });
+
+  toastTimer = window.setTimeout(() => {
+    fields.toast.classList.remove("is-visible");
+    toastTimer = window.setTimeout(() => {
+      fields.toast.hidden = true;
+      toastTimer = 0;
+    }, 180);
+  }, duration);
+}
+
 function setApiPreview(message) {
   if (!fields.apiPreviewBox || !fields.apiPreview) {
     return;
@@ -1538,6 +1682,65 @@ function sendRuntimeMessage(message) {
         return;
       }
       resolve(response.data);
+    });
+  });
+}
+
+async function ensureApiHostPermissions(apiConfig, options = {}) {
+  const origins = getApiPermissionOrigins(apiConfig);
+  if (origins.length === 0 || !chrome.permissions) {
+    return true;
+  }
+
+  const permissions = { origins };
+  if (options.prompt) {
+    return requestOptionalPermissions(permissions);
+  }
+
+  return containsOptionalPermissions(permissions);
+}
+
+function getApiPermissionOrigins(apiConfig) {
+  const urls = [];
+  if (apiConfig.mode === "openai-compatible" && apiConfig.baseUrl) {
+    urls.push(apiConfig.baseUrl);
+  }
+  if (apiConfig.mode === "custom" && apiConfig.customUrl) {
+    urls.push(apiConfig.customUrl);
+  }
+
+  return [...new Set(urls.map(toOriginPermissionPattern).filter(Boolean))];
+}
+
+function toOriginPermissionPattern(value) {
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) {
+      return "";
+    }
+    return `${url.protocol}//${url.hostname}/*`;
+  } catch {
+    return "";
+  }
+}
+
+function containsOptionalPermissions(permissions) {
+  return new Promise((resolve) => {
+    chrome.permissions.contains(permissions, (granted) => {
+      resolve(Boolean(granted));
+    });
+  });
+}
+
+function requestOptionalPermissions(permissions) {
+  return new Promise((resolve, reject) => {
+    chrome.permissions.request(permissions, (granted) => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve(Boolean(granted));
     });
   });
 }
