@@ -840,7 +840,7 @@ function splitMarkdownExperienceItems(items) {
     const organization = String(item?.organization || "");
     const role = String(item?.role || "");
     const looksLikeProject = /项目|作品|系统|平台|Agent|RAG|后台|助手/i.test(`${organization} ${role}`);
-    if (looksLikeProject && !/公司|集团|银行|证券|科技|有限|中心|研究院/.test(organization)) {
+    if (looksLikeProject && !/公司|集团|科技|有限|中心|研究院|事务所|工作室|实验室/.test(organization)) {
       projects.push(item);
     } else {
       internships.push(item);

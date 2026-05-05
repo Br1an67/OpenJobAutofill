@@ -137,7 +137,7 @@ const RESUME_SECTION_GUIDE = [
     key: "intention",
     title: "求职意向",
     aliases: ["求职意向 添加"],
-    placeholder: "- 意向岗位：金融科技岗\n- 预计入职时间：2027-07\n- 期望工作城市：深圳\n- 期望薪资：面议\n- 是否接受调剂：是",
+    placeholder: "- 意向岗位：软件开发工程师\n- 预计入职时间：2027-07\n- 期望工作城市：上海\n- 期望薪资：面议\n- 是否接受调剂：是",
     tips: ["岗位、城市、薪资、到岗时间和调剂意愿都放这里。", "如果不同公司岗位叫法不同，可以追加“目标岗位”“应聘岗位”等别名。"]
   },
   {
@@ -151,7 +151,7 @@ const RESUME_SECTION_GUIDE = [
     key: "internship",
     title: "实习经历",
     aliases: ["工作/实习经历", "实践经历"],
-    placeholder: "### 实习经历 1\n- 开始时间：2025-07\n- 结束时间：2026-03\n- 公司：星桥科技有限公司\n- 部门：金融科技部\n- 职位：软件开发实习生\n- 工作内容：参与招聘系统和数据看板开发。\n- 工作成果：完成 6 个模块交付。",
+    placeholder: "### 实习经历 1\n- 开始时间：2025-07\n- 结束时间：2026-03\n- 公司：星桥科技有限公司\n- 部门：平台研发部\n- 职位：软件开发实习生\n- 工作内容：参与招聘系统和数据看板开发。\n- 工作成果：完成 6 个模块交付。",
     tips: ["公司、部门、岗位、时间、地点、工作内容和成果是高频字段。", "证明人信息如果愿意提供，也可以作为字段追加。"]
   },
   {
@@ -524,19 +524,6 @@ const STRUCTURED_RESUME_SECTIONS = [
     ])
   }
 ];
-
-const LEGACY_TEMPLATE_NOISE_LABELS = new Set([
-  "是否是中信证券实习",
-  "证券从业资格考试",
-  "有无通过的证券从业资格考试",
-  "是否通过证券行业专业人员一般业务水平评价测试",
-  "是否通过基金从业人员资格考试",
-  "是否通过期货从业人员资格考试",
-  "是否有亲属在本公司任职",
-  "有无亲属在其他证券公司任职",
-  "是否存在亲属在本行工作",
-  "是否有亲属在本行工作"
-].map(normalizeProfileSectionTitle));
 
 let defaults = null;
 let activeProfileSectionKey = "";
@@ -1397,10 +1384,6 @@ function parseSimpleStructuredValues(section, body) {
   const parsed = parseKeyValueLines(body);
 
   for (const row of parsed.rows) {
-    if (isLegacyTemplateNoiseLabel(row.label)) {
-      continue;
-    }
-
     const field = matchStructuredField(section, row.label);
     if (field) {
       values[field.label] = row.value;
@@ -1410,10 +1393,6 @@ function parseSimpleStructuredValues(section, body) {
   }
 
   return { values, custom };
-}
-
-function isLegacyTemplateNoiseLabel(label) {
-  return LEGACY_TEMPLATE_NOISE_LABELS.has(normalizeProfileSectionTitle(label));
 }
 
 function parseKeyValueLines(body) {
@@ -1824,7 +1803,7 @@ function splitMarkdownExperienceItems(items) {
     const organization = String(item?.organization || "");
     const role = String(item?.role || "");
     const looksLikeProject = /项目|作品|系统|平台|Agent|RAG|后台|助手/i.test(`${organization} ${role}`);
-    if (looksLikeProject && !/公司|集团|银行|证券|科技|有限|中心|研究院/.test(organization)) {
+    if (looksLikeProject && !/公司|集团|科技|有限|中心|研究院|事务所|工作室|实验室/.test(organization)) {
       projects.push(item);
     } else {
       internships.push(item);

@@ -51,18 +51,6 @@
 
   const SITE_ADAPTERS = [
     {
-      id: "citics-careers",
-      name: "中信证券 ATS",
-      urlPattern: /(?:^|\.)careers\.citics\.com$/i,
-      confidence: 0.98,
-      indicators: [".ant-form-item", ".ant-select", ".ant-radio-wrapper", ".ant-picker"],
-      containerSelector: ".ant-form-item,.ant-row.ant-form-item,[class*='formItem'],[class*='FormItem'],[class*='field'],[class*='Field']",
-      labelSelector: ".ant-form-item-label,label,.ant-checkbox-wrapper,.ant-radio-wrapper,[class*='label'],[class*='Label']",
-      sectionSelector: ".ant-card-head-title,.ant-collapse-header,.ant-tabs-tab,[class*='module-title'],[class*='section-title'],h2,h3,h4",
-      saveLabels: ["保存", "保 存", "暂存", "暂 存", "确定", "完成"],
-      editLabels: ["编辑", "修改", "完善"]
-    },
-    {
       id: "zhiye",
       name: "智易/智业 ATS",
       urlPattern: /(?:^|\.)zhiye\.com$/i,
@@ -271,7 +259,7 @@
     单位名称: ["公司名称", "公司", "实习单位", "实践单位", "工作单位", "组织名称"],
     公司: ["公司名称", "单位名称", "实习单位", "工作单位"],
     类型: ["经历类型", "工作实习类型"],
-    是否目标公司实习: ["是否是中信证券实习", "是否为应聘单位实习", "是否为目标公司实习"],
+    是否目标公司实习: ["是否为应聘单位实习", "是否为目标公司实习"],
     部门: ["部门名称", "所在部门"],
     职位名称: ["岗位", "岗位名称", "实习岗位", "职务名称", "角色"],
     工作实习地点: ["工作/实习地点", "工作地点", "实习地点"],
@@ -303,7 +291,6 @@
     颁奖单位: ["授奖单位", "奖惩单位", "颁发单位"],
     奖励等级: ["奖项等级", "奖励级别", "奖惩层级"],
     奖惩描述: ["获奖描述", "奖励描述", "奖惩原因"],
-    证券从业资格考试: ["有无通过的证券从业资格考试", "证券从业", "证券从业资格"],
     证书: ["证书名称", "资格证书", "技能证书"],
     证书名称技能名称: ["证书名称（技能名称）", "证书名称", "技能名称"],
     外语种类: ["外语语种", "语言类型", "语种"],
@@ -339,8 +326,7 @@
     专利类型: ["发明专利", "实用新型"],
     专利成果: ["专利描述", "专利说明"],
     与本人关系: ["关系", "亲属关系"],
-    亲属在应聘单位工作: ["亲属在本行工作", "是否存在亲属在应聘单位工作", "是否存在亲属在本行工作"],
-    亲属在本行工作: ["亲属在应聘单位工作", "是否存在亲属在应聘单位工作", "是否存在亲属在本行工作"],
+    亲属在应聘单位工作: ["是否存在亲属在应聘单位工作"],
     工作单位: ["家属工作单位", "亲属工作单位"],
     部门及职位: ["家属职务", "亲属职务", "职务"],
     联系电话: ["家属联系电话", "亲属联系电话"],
@@ -351,34 +337,16 @@
     工作地点是否服从调剂: ["是否接受调剂", "是否服从调剂", "接受调剂"],
     是否同意部门岗位调配: ["是否同意部门/岗位调配", "部门岗位调配", "岗位调配"],
     首选工作地点: ["第一工作地点", "意向工作地点"],
-    首选工作地点是否接受调剂: ["工作地点是否接受调剂", "地点调剂"],
-    是否通过证券行业专业人员一般业务水平评价测试: ["证券从业", "证券从业资格", "证券行业专业人员一般业务水平评价测试"],
-    是否通过基金从业人员资格考试: ["基金从业", "基金从业资格", "基金从业人员资格考试"],
-    是否通过期货从业人员资格考试: ["期货从业", "期货从业资格", "期货从业人员资格考试"]
+    首选工作地点是否接受调剂: ["工作地点是否接受调剂", "地点调剂"]
   };
 
   const GENERIC_NO_LABELS = [
-    "是否接受过证监会的监管措施或行政处罚",
     "您是否参加了参加过任何非法组织或团体",
     "您是否患重大疾病或有家族遗传病史",
     "您是否涉嫌违规违纪违法犯罪接受纪检监察检察公安等行政执法机关等谈话询问讯问处罚情况",
     "您本人及家庭成员有无外国国籍及境外居留权是否被司法机关追诉被监察机关留置或被列为失信被执行人",
-    "是否有创业经商办企业或持有未上市企业股权的投资情况",
-    "现在是否有在证券市场开户进行股票及相关证券的投资"
+    "是否有创业经商办企业或持有未上市企业股权的投资情况"
   ];
-
-  const LEGACY_TEMPLATE_NOISE_LABELS = new Set([
-    "是否是中信证券实习",
-    "证券从业资格考试",
-    "有无通过的证券从业资格考试",
-    "是否通过证券行业专业人员一般业务水平评价测试",
-    "是否通过基金从业人员资格考试",
-    "是否通过期货从业人员资格考试",
-    "是否有亲属在本公司任职",
-    "有无亲属在其他证券公司任职",
-    "是否存在亲属在本行工作",
-    "是否有亲属在本行工作"
-  ].map(normalizeDraftKey));
 
   function normalizeText(value, maxLength = 260) {
     const text = String(value || "")
@@ -488,11 +456,6 @@
       return selectors.editLabels;
     }
     return ["保存"];
-  }
-
-  function isLocalFirstSite(scan = null) {
-    const adapter = scan?.siteAdapter || getActiveSiteAdapter();
-    return adapter?.id === "citics-careers";
   }
 
   function normalizeProgressPercent(value) {
@@ -2751,9 +2714,6 @@
       if (!cleanLabel) {
         return;
       }
-      if (isLegacyTemplateNoiseLabel(cleanLabel)) {
-        return;
-      }
       const section = currentSection || ensureSection();
       currentItem = {
         label: cleanLabel,
@@ -2816,10 +2776,6 @@
         items: section.items.filter((item) => item.label)
       }))
       .filter((section) => section.items.length > 0);
-  }
-
-  function isLegacyTemplateNoiseLabel(label) {
-    return LEGACY_TEMPLATE_NOISE_LABELS.has(normalizeDraftKey(label));
   }
 
   function normalizeDraftKey(value) {
@@ -2915,7 +2871,7 @@
     if (/声明|永居权|永久居留|背景调查|事实完全相符|非法组织|重大疾病|行政处罚|失信被执行人|境外居留|任职|持股/.test(text)) {
       return "有关声明";
     }
-    if (/是否|有无|能否|同意|接受|服从/.test(text) && /亲属|调剂|背景|居留|疾病|处罚|任职|持股|股票|证券/.test(text)) {
+    if (/是否|有无|能否|同意|接受|服从/.test(text) && /亲属|调剂|背景|居留|疾病|处罚|任职|持股|股票/.test(text)) {
       return "有关声明";
     }
     if (/其他信息|其他个人情况|附加信息|附加问题/.test(text)) {
@@ -3686,14 +3642,7 @@
     const confidence = score >= 40 ? Math.max(0, Math.min(0.99, 0.45 + score / 100)) : Math.max(0, score / 120);
     const text = compactText([fieldLabel, fieldCategory, field.nearbyText, field.placeholder, field.name, field.id].join(" "));
     const writeMode = guessDraftValueFieldType(field);
-    const isCiticsField = field?.siteAdapterId === "citics-careers";
-    const defaultSelectScore = isCiticsField
-      ? field.hasCurrentValue
-        ? 52
-        : 42
-      : field.hasCurrentValue
-        ? 84
-        : 70;
+    const defaultSelectScore = field.hasCurrentValue ? 84 : 70;
     const selectedByDefault =
       score >= defaultSelectScore &&
       value !== "" &&
@@ -4089,24 +4038,19 @@
       setAssistantStatus("正在扫描当前页面并生成本地填充草稿...");
       const baseScan = await scanForm();
       setAutofillProgress("分析页面结构", 42, `已发现 ${baseScan.fields.length} 个可见字段`);
-      const useLocalFirst = isLocalFirstSite(baseScan);
-      const aiStructure = useLocalFirst
-        ? { scan: baseScan, status: "已识别为中信证券页面，跳过 AI，使用本地规则。", usedAi: false }
-        : await enhanceScanWithAi(baseScan);
+      const aiStructure = await enhanceScanWithAi(baseScan);
       const scan = aiStructure.scan || baseScan;
       setAutofillProgress("匹配本地资料", 64, `正在生成 ${scan.fields.length} 个字段的草稿`);
       let draft = buildAutofillDraft(scan);
-      let aiStatus = useLocalFirst ? "中信证券页面已使用本地规则直填。" : "未调用 AI。";
+      let aiStatus = "未调用 AI。";
 
-      if (!useLocalFirst) {
-        try {
-          setAutofillProgress("AI 生成映射", 76, "只发送字段目录，不发送资料值");
-          const aiResult = await enhanceDraftWithAi(scan, draft);
-          draft = aiResult.draft || draft;
-          aiStatus = aiResult.status || aiStatus;
-        } catch (error) {
-          aiStatus = `AI 映射不可用，已回退本地规则：${error.message}`;
-        }
+      try {
+        setAutofillProgress("AI 生成映射", 76, "只发送字段目录，不发送资料值");
+        const aiResult = await enhanceDraftWithAi(scan, draft);
+        draft = aiResult.draft || draft;
+        aiStatus = aiResult.status || aiStatus;
+      } catch (error) {
+        aiStatus = `AI 映射不可用，已回退本地规则：${error.message}`;
       }
 
       setAutofillProgress("整理草稿", 90, `已匹配 ${draft.candidates.length} 项`);
