@@ -170,10 +170,10 @@ const RESUME_SECTION_GUIDE = [
   },
   {
     key: "student",
-    title: "学生工作",
-    aliases: ["干部任职经历", "在校职务", "社团工作"],
-    placeholder: "### 学生工作 1\n- 组织名称：软件工程学院技术协会\n- 部门：活动部\n- 职务：活动负责人\n- 开始时间：2020-09\n- 结束时间：2022-06\n- 工作内容：组织技术分享和项目交流活动。",
-    tips: ["学生会、班委、社团、干部任职都可以放这里。", "如果想区分社团工作和学生工作，可以新增 `## 社团工作` 模块。"]
+    title: "干部任职经历（在校职务）",
+    aliases: ["学生工作", "干部任职经历", "在校职务", "社团工作"],
+    placeholder: "### 干部任职经历（在校职务） 1\n- 组织名称：软件工程学院技术协会\n- 职位：活动负责人\n- 开始时间：2020-09\n- 结束时间：2022-06\n- 工作内容：组织技术分享和项目交流活动。\n- 本人职责：负责活动策划、报名统计和现场协调。",
+    tips: ["学生会、班委、社团、干部任职都可以放这里。", "塔塔网申中这个模块叫“干部任职经历（在校职务）”。"]
   },
   {
     key: "awards",
@@ -191,10 +191,10 @@ const RESUME_SECTION_GUIDE = [
   },
   {
     key: "computer",
-    title: "计算机技能",
-    aliases: ["IT技能", "证书技能"],
-    placeholder: "- 计算机水平：熟悉 JavaScript、TypeScript、React、Node.js。\n- 其它技能：熟悉数据结构、数据库基础、问题排查和技术文档撰写。",
-    tips: ["技能描述可以是长句，主要作为提醒和文本框填充来源。", "具体证书可以放到“证书”模块。"]
+    title: "计算机技能（IT技能）",
+    aliases: ["计算机技能", "IT技能", "证书技能"],
+    placeholder: "### 计算机技能 1\n- 获得时间：2024-06\n- 证书名称（技能名称）：前端开发与浏览器扩展开发\n- 成绩：熟练\n- 掌握程度：熟练",
+    tips: ["塔塔网申中这是可添加多条的技能/证书模块。", "通用技能长描述建议放到“其他信息”的“爱好及专长”，具体证书放到“证书”模块。"]
   },
   {
     key: "certificates",
@@ -243,7 +243,7 @@ const RESUME_SECTION_GUIDE = [
     title: "有关声明",
     aliases: ["个人声明", "声明"],
     placeholder: "- 是否存在亲属在应聘单位工作：否\n- 是否患有影响工作的疾病：否\n- 是否存在不良行为记录：否\n- 是否享有境外长期或永久居留权：否\n- 是否同意背景调查：是",
-    tips: ["声明类问题通常要认真核对，不建议盲填。", "“本行”“本公司”等强行业措辞建议统一写成“应聘单位”。"]
+    tips: ["声明类问题通常要认真核对，不建议盲填。", "行业或公司专属措辞建议统一写成“应聘单位”。"]
   },
   {
     key: "other",
@@ -419,11 +419,11 @@ const STRUCTURED_RESUME_SECTIONS = [
   },
   {
     key: "student",
-    title: "学生工作",
+    title: "干部任职经历（在校职务）",
     kind: "repeat",
-    itemLabel: "学生工作",
+    itemLabel: "干部任职经历",
     defaultItems: 1,
-    fields: profileFields(["开始时间", "结束时间", "组织名称", "部门", "职位", "职务", "工作内容", "本人职责"])
+    fields: profileFields(["开始时间", "结束时间", "组织名称", "职位", "工作内容", "本人职责"])
   },
   {
     key: "awards",
@@ -443,9 +443,11 @@ const STRUCTURED_RESUME_SECTIONS = [
   },
   {
     key: "computer",
-    title: "计算机技能",
-    kind: "simple",
-    fields: profileFields(["获得时间", "证书名称（技能名称）", "成绩", "掌握程度", "计算机水平", "其它技能"])
+    title: "计算机技能（IT技能）",
+    kind: "repeat",
+    itemLabel: "计算机技能",
+    defaultItems: 1,
+    fields: profileFields(["获得时间", "证书名称（技能名称）", "成绩", "掌握程度"])
   },
   {
     key: "certificates",
@@ -522,6 +524,19 @@ const STRUCTURED_RESUME_SECTIONS = [
     ])
   }
 ];
+
+const LEGACY_TEMPLATE_NOISE_LABELS = new Set([
+  "是否是中信证券实习",
+  "证券从业资格考试",
+  "有无通过的证券从业资格考试",
+  "是否通过证券行业专业人员一般业务水平评价测试",
+  "是否通过基金从业人员资格考试",
+  "是否通过期货从业人员资格考试",
+  "是否有亲属在本公司任职",
+  "有无亲属在其他证券公司任职",
+  "是否存在亲属在本行工作",
+  "是否有亲属在本行工作"
+].map(normalizeProfileSectionTitle));
 
 let defaults = null;
 let activeProfileSectionKey = "";
@@ -1382,6 +1397,10 @@ function parseSimpleStructuredValues(section, body) {
   const parsed = parseKeyValueLines(body);
 
   for (const row of parsed.rows) {
+    if (isLegacyTemplateNoiseLabel(row.label)) {
+      continue;
+    }
+
     const field = matchStructuredField(section, row.label);
     if (field) {
       values[field.label] = row.value;
@@ -1391,6 +1410,10 @@ function parseSimpleStructuredValues(section, body) {
   }
 
   return { values, custom };
+}
+
+function isLegacyTemplateNoiseLabel(label) {
+  return LEGACY_TEMPLATE_NOISE_LABELS.has(normalizeProfileSectionTitle(label));
 }
 
 function parseKeyValueLines(body) {

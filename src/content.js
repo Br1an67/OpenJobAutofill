@@ -367,6 +367,19 @@
     "现在是否有在证券市场开户进行股票及相关证券的投资"
   ];
 
+  const LEGACY_TEMPLATE_NOISE_LABELS = new Set([
+    "是否是中信证券实习",
+    "证券从业资格考试",
+    "有无通过的证券从业资格考试",
+    "是否通过证券行业专业人员一般业务水平评价测试",
+    "是否通过基金从业人员资格考试",
+    "是否通过期货从业人员资格考试",
+    "是否有亲属在本公司任职",
+    "有无亲属在其他证券公司任职",
+    "是否存在亲属在本行工作",
+    "是否有亲属在本行工作"
+  ].map(normalizeDraftKey));
+
   function normalizeText(value, maxLength = 260) {
     const text = String(value || "")
       .replace(/\s+/g, " ")
@@ -2738,6 +2751,9 @@
       if (!cleanLabel) {
         return;
       }
+      if (isLegacyTemplateNoiseLabel(cleanLabel)) {
+        return;
+      }
       const section = currentSection || ensureSection();
       currentItem = {
         label: cleanLabel,
@@ -2800,6 +2816,10 @@
         items: section.items.filter((item) => item.label)
       }))
       .filter((section) => section.items.length > 0);
+  }
+
+  function isLegacyTemplateNoiseLabel(label) {
+    return LEGACY_TEMPLATE_NOISE_LABELS.has(normalizeDraftKey(label));
   }
 
   function normalizeDraftKey(value) {
