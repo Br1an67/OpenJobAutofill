@@ -513,9 +513,6 @@ const STRUCTURED_RESUME_SECTIONS = [
     title: "其他信息",
     kind: "simple",
     fields: profileFields([
-      "证券从业资格考试",
-      "是否通过基金从业人员资格考试",
-      "是否通过期货从业人员资格考试",
       "受到奖励/学术成果",
       "社会/校园活动",
       "爱好及专长",
