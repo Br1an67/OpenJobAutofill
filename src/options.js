@@ -462,7 +462,7 @@ window.addEventListener("beforeunload", (event) => {
 
 async function loadSettings() {
   try {
-    const settings = await sendRuntimeMessage({ type: "AI_RESUME_GET_SETTINGS" });
+    const settings = await sendRuntimeMessage({ type: "OJAF_GET_SETTINGS" });
     applyApiConfig(settings.apiConfig);
     renderProfileNav();
     renderProfileTips(RESUME_SECTION_GUIDE[0]?.key);
@@ -525,7 +525,7 @@ async function saveApiSettings() {
     }
 
     await sendRuntimeMessage({
-      type: "AI_RESUME_SAVE_SETTINGS",
+      type: "OJAF_SAVE_SETTINGS",
       payload: { apiConfig }
     });
 
@@ -554,7 +554,7 @@ async function saveProfile() {
     showToast("正在保存资料...", "busy", 1600);
     const profileV2 = collectProfileV2FromEditor();
     await sendRuntimeMessage({
-      type: "AI_RESUME_SAVE_SETTINGS",
+      type: "OJAF_SAVE_SETTINGS",
       payload: { profileV2 }
     });
     setStatus("简历资料保存成功，已写入本机的 chrome.storage.local。");
@@ -602,7 +602,7 @@ async function importProfileFromFile() {
     const profileV2 = parseImportedProfileBackup(text);
     renderProfileSectionEditor(profileV2);
     await sendRuntimeMessage({
-      type: "AI_RESUME_SAVE_SETTINGS",
+      type: "OJAF_SAVE_SETTINGS",
       payload: { profileV2 }
     });
     setStatus("已导入并保存到本机。侧边栏会立即读取这份简历资料。");
@@ -635,7 +635,7 @@ async function clearLocalData() {
   }
 
   try {
-    await sendRuntimeMessage({ type: "AI_RESUME_CLEAR_SETTINGS" });
+    await sendRuntimeMessage({ type: "OJAF_CLEAR_SETTINGS" });
     await loadSettings();
     setStatus("本地数据已清空，已恢复默认模板。");
   } catch (error) {
@@ -655,7 +655,7 @@ async function testConnection() {
     }
 
     const result = await sendRuntimeMessage({
-      type: "AI_RESUME_TEST_CONNECTION",
+      type: "OJAF_TEST_CONNECTION",
       payload: { apiConfig }
     });
     setStatus("连接正常，响应预览已显示在 API 设置下方。");
@@ -696,7 +696,7 @@ async function refreshModelList(options = {}) {
     }
 
     const result = await sendRuntimeMessage({
-      type: "AI_RESUME_LIST_MODELS",
+      type: "OJAF_LIST_MODELS",
       payload: { apiConfig }
     });
     renderModelOptions(Array.isArray(result.models) ? result.models : []);

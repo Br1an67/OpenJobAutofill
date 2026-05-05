@@ -27,8 +27,8 @@ const STORAGE_KEYS = {
   apiConfig: "apiConfig"
 };
 
-const ASSISTANT_STATE_KEY = "AI_RESUME_ASSISTANT_STATE";
-const MAX_ASSISTANT_STATE_ITEMS = 20;
+const PROFILE_PANEL_STATE_KEY = "OJAF_PROFILE_PANEL_STATE";
+const MAX_PROFILE_PANEL_STATE_ITEMS = 20;
 
 chrome.runtime.onInstalled.addListener(async () => {
   const existing = await chrome.storage.local.get([
@@ -51,7 +51,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || typeof message.type !== "string" || !message.type.startsWith("AI_RESUME_")) {
+  if (!message || typeof message.type !== "string" || !message.type.startsWith("OJAF_")) {
     return undefined;
   }
 
@@ -69,26 +69,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 async function handleMessage(message) {
   switch (message.type) {
-    case "AI_RESUME_GET_SETTINGS":
+    case "OJAF_GET_SETTINGS":
       return getSettings();
-    case "AI_RESUME_OPEN_OPTIONS":
+    case "OJAF_OPEN_OPTIONS":
       await chrome.runtime.openOptionsPage();
       return {};
-    case "AI_RESUME_SAVE_SETTINGS":
+    case "OJAF_SAVE_SETTINGS":
       return saveSettings(message.payload || {});
-    case "AI_RESUME_CLEAR_SETTINGS":
+    case "OJAF_CLEAR_SETTINGS":
       return clearSettings();
-    case "AI_RESUME_MAP_FIELDS":
+    case "OJAF_MAP_FIELDS":
       return mapFields(message.payload || {});
-    case "AI_RESUME_ANALYZE_PAGE_STRUCTURE":
+    case "OJAF_ANALYZE_PAGE_STRUCTURE":
       return analyzePageStructure(message.payload || {});
-    case "AI_RESUME_SAVE_ASSISTANT_STATE":
-      return saveAssistantState(message.payload || {});
-    case "AI_RESUME_GET_ASSISTANT_STATE":
-      return getAssistantState(message.payload || {});
-    case "AI_RESUME_LIST_MODELS":
+    case "OJAF_SAVE_PROFILE_PANEL_STATE":
+      return saveProfilePanelState(message.payload || {});
+    case "OJAF_GET_PROFILE_PANEL_STATE":
+      return getProfilePanelState(message.payload || {});
+    case "OJAF_LIST_MODELS":
       return listModels(message.payload || {});
-    case "AI_RESUME_TEST_CONNECTION":
+    case "OJAF_TEST_CONNECTION":
       return testApi(message.payload || {});
     default:
       throw new Error(`Unknown message type: ${message.type}`);
@@ -126,15 +126,15 @@ async function clearSettings() {
   return { cleared: true };
 }
 
-async function saveAssistantState(payload) {
-  const pageKey = normalizeAssistantStateKey(payload.pageKey || "");
+async function saveProfilePanelState(payload) {
+  const pageKey = normalizeProfilePanelStateKey(payload.pageKey || "");
   if (!pageKey || !chrome.storage.session) {
     return { saved: false };
   }
 
   const patch = isPlainObject(payload.patch) ? payload.patch : {};
-  const result = await chrome.storage.session.get(ASSISTANT_STATE_KEY);
-  const allStates = result[ASSISTANT_STATE_KEY] || {};
+  const result = await chrome.storage.session.get(PROFILE_PANEL_STATE_KEY);
+  const allStates = result[PROFILE_PANEL_STATE_KEY] || {};
   allStates[pageKey] = {
     ...(allStates[pageKey] || {}),
     pageKey,
@@ -144,22 +144,22 @@ async function saveAssistantState(payload) {
 
   const entries = Object.entries(allStates)
     .sort((left, right) => Number(right[1]?.updatedAt || 0) - Number(left[1]?.updatedAt || 0))
-    .slice(0, MAX_ASSISTANT_STATE_ITEMS);
-  await chrome.storage.session.set({ [ASSISTANT_STATE_KEY]: Object.fromEntries(entries) });
+    .slice(0, MAX_PROFILE_PANEL_STATE_ITEMS);
+  await chrome.storage.session.set({ [PROFILE_PANEL_STATE_KEY]: Object.fromEntries(entries) });
   return { saved: true };
 }
 
-async function getAssistantState(payload) {
-  const pageKey = normalizeAssistantStateKey(payload.pageKey || "");
+async function getProfilePanelState(payload) {
+  const pageKey = normalizeProfilePanelStateKey(payload.pageKey || "");
   if (!pageKey || !chrome.storage.session) {
     return null;
   }
 
-  const result = await chrome.storage.session.get(ASSISTANT_STATE_KEY);
-  return result[ASSISTANT_STATE_KEY]?.[pageKey] || null;
+  const result = await chrome.storage.session.get(PROFILE_PANEL_STATE_KEY);
+  return result[PROFILE_PANEL_STATE_KEY]?.[pageKey] || null;
 }
 
-function normalizeAssistantStateKey(value) {
+function normalizeProfilePanelStateKey(value) {
   return String(value || "")
     .replace(/\s+/g, " ")
     .trim()

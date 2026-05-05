@@ -1,34 +1,34 @@
 (() => {
   const SCRIPT_VERSION = "0.8.2-direct-fill";
 
-  if (window.__AI_RESUME_AUTOFILL_VERSION__ === SCRIPT_VERSION) {
+  if (window.__OJAF_AUTOFILL_VERSION__ === SCRIPT_VERSION) {
     return;
   }
 
-  window.__AI_RESUME_AUTOFILL_VERSION__ = SCRIPT_VERSION;
-  window.__AI_RESUME_AUTOFILL_LOADED__ = true;
+  window.__OJAF_AUTOFILL_VERSION__ = SCRIPT_VERSION;
+  window.__OJAF_AUTOFILL_LOADED__ = true;
 
-  const FIELD_ATTR = "data-ai-resume-field-id";
-  const MARK_ATTR = "data-ai-resume-mark";
-  const EDIT_ATTEMPT_ATTR = "data-ai-resume-edit-attempted";
-  const STYLE_ID = "ai-resume-autofill-style";
-  const PANEL_ID = "ai-resume-field-assistant";
-  const FLOAT_ID = "ai-resume-floating-status";
-  const PANEL_HIDDEN_ATTR = "data-ai-resume-hidden";
-  const PANEL_COLLAPSED_ATTR = "data-ai-resume-collapsed";
+  const FIELD_ATTR = "data-ojaf-field-id";
+  const MARK_ATTR = "data-ojaf-mark";
+  const EDIT_ATTEMPT_ATTR = "data-ojaf-edit-attempted";
+  const STYLE_ID = "ojaf-autofill-style";
+  const PANEL_ID = "ojaf-profile-panel";
+  const FLOAT_ID = "ojaf-floating-status";
+  const PANEL_HIDDEN_ATTR = "data-ojaf-hidden";
+  const PANEL_COLLAPSED_ATTR = "data-ojaf-collapsed";
   const MAX_EDIT_EXPANSIONS = 20;
-  const ASSISTANT_STATE_DEBOUNCE_MS = 300;
+  const PROFILE_PANEL_STATE_DEBOUNCE_MS = 300;
   let fieldCounter = 0;
-  let assistantVisible = false;
-  let assistantCollapsed = false;
-  let assistantPanel = null;
-  let assistantStateSaveTimer = null;
-  let assistantStateRestored = false;
+  let profilePanelVisible = false;
+  let profilePanelCollapsed = false;
+  let profilePanel = null;
+  let profilePanelStateSaveTimer = null;
+  let profilePanelStateRestored = false;
   let currentProfileV2 = null;
   let currentProfileLoadPromise = null;
   let currentSiteAdapter = null;
   let sidebarFilter = "";
-  let activeCheatsheetCategory = "";
+  let activeProfileCategory = "";
   let autofillInProgress = false;
   let autofillProgress = { active: false, stage: "", percent: 0, detail: "" };
   let autofillSummary = null;
@@ -439,8 +439,8 @@
     };
 
     renderFloatingStatus();
-    if (assistantVisible) {
-      renderAssistantPanel();
+    if (profilePanelVisible) {
+      renderProfilePanel();
     }
   }
 
@@ -448,8 +448,8 @@
     autofillInProgress = false;
     autofillProgress = { active: false, stage: "", percent: 0, detail: normalizeText(detail || "", 160) };
     renderFloatingStatus();
-    if (assistantVisible) {
-      renderAssistantPanel();
+    if (profilePanelVisible) {
+      renderProfilePanel();
     }
   }
 
@@ -471,41 +471,41 @@
 
   function getAutofillRuntimeState() {
     return {
-      assistantVisible,
-      assistantCollapsed,
+      profilePanelVisible,
+      profilePanelCollapsed,
       sidebarFilter,
-      activeCheatsheetCategory,
+      activeProfileCategory,
       autofillInProgress,
       autofillProgress: { ...autofillProgress },
       autofillSummary: autofillSummary ? { ...autofillSummary } : null
     };
   }
 
-  function getAssistantStateSnapshot() {
+  function getProfilePanelStateSnapshot() {
     return {
-      assistantVisible,
-      assistantCollapsed,
+      profilePanelVisible,
+      profilePanelCollapsed,
       sidebarFilter,
-      activeCheatsheetCategory
+      activeProfileCategory
     };
   }
 
-  function queueAssistantStateSave() {
-    scheduleAssistantStateSave(getAssistantStateSnapshot());
+  function queueProfilePanelStateSave() {
+    scheduleProfilePanelStateSave(getProfilePanelStateSnapshot());
   }
 
-  function renderAndSaveAssistantPanel(statusMessage = "", isError = false) {
-    renderAssistantPanel();
+  function renderAndSaveProfilePanel(statusMessage = "", isError = false) {
+    renderProfilePanel();
     if (statusMessage) {
-      setAssistantStatus(statusMessage, isError);
+      setProfilePanelStatus(statusMessage, isError);
     }
-    queueAssistantStateSave();
+    queueProfilePanelStateSave();
   }
 
-  function goAssistantHome() {
-    activeCheatsheetCategory = "";
+  function goProfilePanelHome() {
+    activeProfileCategory = "";
     sidebarFilter = "";
-    renderAndSaveAssistantPanel("已返回主页。");
+    renderAndSaveProfilePanel("已返回主页。");
   }
 
   function sendRuntimeMessage(message) {
@@ -530,21 +530,21 @@
     });
   }
 
-  function scheduleAssistantStateSave(patch = {}) {
-    if (assistantStateSaveTimer) {
-      clearTimeout(assistantStateSaveTimer);
+  function scheduleProfilePanelStateSave(patch = {}) {
+    if (profilePanelStateSaveTimer) {
+      clearTimeout(profilePanelStateSaveTimer);
     }
 
-    assistantStateSaveTimer = setTimeout(() => {
-      assistantStateSaveTimer = null;
-      void persistAssistantState(patch);
-    }, ASSISTANT_STATE_DEBOUNCE_MS);
+    profilePanelStateSaveTimer = setTimeout(() => {
+      profilePanelStateSaveTimer = null;
+      void persistProfilePanelState(patch);
+    }, PROFILE_PANEL_STATE_DEBOUNCE_MS);
   }
 
-  async function persistAssistantState(patch = {}) {
+  async function persistProfilePanelState(patch = {}) {
     try {
       await sendRuntimeMessage({
-        type: "AI_RESUME_SAVE_ASSISTANT_STATE",
+        type: "OJAF_SAVE_PROFILE_PANEL_STATE",
         payload: {
           pageKey: getPageKey(),
           patch
@@ -555,15 +555,15 @@
     }
   }
 
-  async function restoreAssistantState() {
-    if (assistantStateRestored) {
+  async function restoreProfilePanelState() {
+    if (profilePanelStateRestored) {
       return;
     }
-    assistantStateRestored = true;
+    profilePanelStateRestored = true;
 
     try {
       const state = await sendRuntimeMessage({
-        type: "AI_RESUME_GET_ASSISTANT_STATE",
+        type: "OJAF_GET_PROFILE_PANEL_STATE",
         payload: {
           pageKey: getPageKey()
         }
@@ -573,16 +573,16 @@
         return;
       }
 
-      assistantVisible = Boolean(state.assistantVisible);
-      assistantCollapsed = Boolean(state.assistantCollapsed);
+      profilePanelVisible = Boolean(state.profilePanelVisible);
+      profilePanelCollapsed = Boolean(state.profilePanelCollapsed);
       sidebarFilter = normalizeText(state.sidebarFilter || "", 80);
-      activeCheatsheetCategory = normalizeText(state.activeCheatsheetCategory || "", 80);
+      activeProfileCategory = normalizeText(state.activeProfileCategory || "", 80);
 
-      if (assistantVisible) {
-        const panel = ensureAssistantPanel();
+      if (profilePanelVisible) {
+        const panel = ensureProfilePanel();
         panel.setAttribute(PANEL_HIDDEN_ATTR, "false");
-        panel.setAttribute(PANEL_COLLAPSED_ATTR, assistantCollapsed ? "true" : "false");
-        renderAssistantPanel();
+        panel.setAttribute(PANEL_COLLAPSED_ATTR, profilePanelCollapsed ? "true" : "false");
+        renderProfilePanel();
       }
     } catch {
       // No persisted state available.
@@ -1933,8 +1933,8 @@
       floating.hidden = true;
     });
     floating.querySelector('[data-action="float-detail"]')?.addEventListener("click", () => {
-      showAssistant();
-      renderAssistantPanel();
+      showProfilePanel();
+      renderProfilePanel();
     });
     floating.querySelector('[data-action="float-clear"]')?.addEventListener("click", clearMarks);
 
@@ -2020,8 +2020,8 @@
     }
   }
 
-  function setAssistantStatus(message, isError = false) {
-    const panel = ensureAssistantPanel();
+  function setProfilePanelStatus(message, isError = false) {
+    const panel = ensureProfilePanel();
     const statusEl = panel.querySelector('[data-role="status"]');
     if (statusEl) {
       statusEl.textContent = message;
@@ -2029,32 +2029,32 @@
     }
   }
 
-  function setAssistantVisible(nextVisible) {
-    assistantVisible = Boolean(nextVisible);
-    const panel = ensureAssistantPanel();
-    panel.setAttribute(PANEL_HIDDEN_ATTR, assistantVisible ? "false" : "true");
-    panel.setAttribute(PANEL_COLLAPSED_ATTR, assistantCollapsed ? "true" : "false");
-    if (assistantVisible) {
-      renderAndSaveAssistantPanel();
+  function setProfilePanelVisible(nextVisible) {
+    profilePanelVisible = Boolean(nextVisible);
+    const panel = ensureProfilePanel();
+    panel.setAttribute(PANEL_HIDDEN_ATTR, profilePanelVisible ? "false" : "true");
+    panel.setAttribute(PANEL_COLLAPSED_ATTR, profilePanelCollapsed ? "true" : "false");
+    if (profilePanelVisible) {
+      renderAndSaveProfilePanel();
     } else {
-      queueAssistantStateSave();
+      queueProfilePanelStateSave();
     }
   }
 
-  function showAssistant() {
-    setAssistantVisible(true);
+  function showProfilePanel() {
+    setProfilePanelVisible(true);
     void refreshCurrentProfile();
   }
 
-  function toggleAssistantCollapsed() {
-    assistantCollapsed = !assistantCollapsed;
-    renderAndSaveAssistantPanel();
+  function toggleProfilePanelCollapsed() {
+    profilePanelCollapsed = !profilePanelCollapsed;
+    renderAndSaveProfilePanel();
   }
 
-  function ensureAssistantPanel() {
+  function ensureProfilePanel() {
     injectStyle();
-    if (assistantPanel && document.contains(assistantPanel)) {
-      return assistantPanel;
+    if (profilePanel && document.contains(profilePanel)) {
+      return profilePanel;
     }
 
     const stalePanel = document.getElementById(PANEL_ID);
@@ -2088,20 +2088,20 @@
     collapseBtn.className = "arf-toggle";
     collapseBtn.dataset.action = "collapse";
     collapseBtn.textContent = "收起";
-    collapseBtn.addEventListener("click", toggleAssistantCollapsed);
+    collapseBtn.addEventListener("click", toggleProfilePanelCollapsed);
 
     const homeBtn = document.createElement("button");
     homeBtn.type = "button";
     homeBtn.className = "arf-home";
     homeBtn.dataset.action = "home";
     homeBtn.textContent = "主页";
-    homeBtn.addEventListener("click", goAssistantHome);
+    homeBtn.addEventListener("click", goProfilePanelHome);
 
     const closeBtn = document.createElement("button");
     closeBtn.type = "button";
     closeBtn.className = "arf-close";
     closeBtn.textContent = "×";
-    closeBtn.addEventListener("click", () => setAssistantVisible(false));
+    closeBtn.addEventListener("click", () => setProfilePanelVisible(false));
     headerActions.append(collapseBtn, homeBtn, closeBtn);
     header.append(titleWrap, headerActions);
 
@@ -2115,9 +2115,9 @@
     searchInput.placeholder = "搜索分类或内容，例如 手机 / 项目 / 奖学金";
     searchInput.addEventListener("input", () => {
       sidebarFilter = normalizeText(searchInput.value || "", 80);
-      activeCheatsheetCategory = "";
+      activeProfileCategory = "";
       renderQuickCopyList(panel);
-      queueAssistantStateSave();
+      queueProfilePanelStateSave();
     });
 
     const content = document.createElement("div");
@@ -2171,7 +2171,7 @@
     settingsBtn.dataset.action = "settings";
     settingsBtn.textContent = "设置";
     settingsBtn.addEventListener("click", () => {
-      void openOptionsPageFromAssistant();
+      void openOptionsPageFromProfilePanel();
     });
 
     actions.append(copyCategoryBtn, refreshBtn, settingsBtn);
@@ -2184,16 +2184,16 @@
     body.append(searchInput, content);
     panel.append(header, body, footer);
     document.documentElement.appendChild(panel);
-    assistantPanel = panel;
+    profilePanel = panel;
     return panel;
   }
 
-  async function openOptionsPageFromAssistant() {
+  async function openOptionsPageFromProfilePanel() {
     try {
-      await sendRuntimeMessage({ type: "AI_RESUME_OPEN_OPTIONS" });
-      setAssistantStatus("已打开设置页。");
+      await sendRuntimeMessage({ type: "OJAF_OPEN_OPTIONS" });
+      setProfilePanelStatus("已打开设置页。");
     } catch (error) {
-      setAssistantStatus(`打开设置失败：${error.message}`, true);
+      setProfilePanelStatus(`打开设置失败：${error.message}`, true);
     }
   }
 
@@ -2203,23 +2203,23 @@
     }
 
     currentProfileLoadPromise = (async () => {
-      const settings = await sendRuntimeMessage({ type: "AI_RESUME_GET_SETTINGS" });
+      const settings = await sendRuntimeMessage({ type: "OJAF_GET_SETTINGS" });
       currentProfileV2 = settings.profileV2 || null;
       return currentProfileV2;
     })();
 
     try {
       const profile = await currentProfileLoadPromise;
-      if (assistantVisible) {
-        renderAssistantPanel();
+      if (profilePanelVisible) {
+        renderProfilePanel();
       }
-      if (options.force && assistantVisible) {
-        setAssistantStatus("已刷新本机简历资料。");
+      if (options.force && profilePanelVisible) {
+        setProfilePanelStatus("已刷新本机简历资料。");
       }
       return profile;
     } catch (error) {
-      if (assistantVisible) {
-        setAssistantStatus(`读取本机资料失败：${error.message}`, true);
+      if (profilePanelVisible) {
+        setProfilePanelStatus(`读取本机资料失败：${error.message}`, true);
       }
       return null;
     } finally {
@@ -2247,7 +2247,7 @@
     return normalizeText(String(value), maxLength);
   }
 
-  function normalizeCheatsheetCategory(title) {
+  function normalizeProfileCategory(title) {
     const text = normalizeText(title, 80);
     if (!text) {
       return "其他信息";
@@ -2318,7 +2318,7 @@
   }
 
   function getCurrentProfileSections() {
-    return profileV2ToCheatsheetSections(currentProfileV2);
+    return profileV2ToProfileSections(currentProfileV2);
   }
 
   function getCurrentProfileEntries() {
@@ -2342,7 +2342,7 @@
     return getCurrentProfileSections().length > 0;
   }
 
-  function profileV2ToCheatsheetSections(profileV2) {
+  function profileV2ToProfileSections(profileV2) {
     if (!profileV2 || typeof profileV2 !== "object") {
       return [];
     }
@@ -2369,8 +2369,8 @@
       return;
     }
 
-    const category = normalizeCheatsheetCategory(section.title || sectionKey || "其他信息");
-    const target = ensureProfileV2CheatsheetSection(sections, category, section.title || category);
+    const category = normalizeProfileCategory(section.title || sectionKey || "其他信息");
+    const target = ensureProfileSection(sections, category, section.title || category);
     if (section.kind === "repeat") {
       const items = Array.isArray(section.items) ? section.items : [];
       items.forEach((item, itemIndex) => {
@@ -2401,7 +2401,7 @@
     });
   }
 
-  function ensureProfileV2CheatsheetSection(sections, category, sourceTitle) {
+  function ensureProfileSection(sections, category, sourceTitle) {
     let section = sections.find((item) => item.category === category);
     if (!section) {
       section = { category, sourceTitles: [], items: [] };
@@ -2413,7 +2413,7 @@
     return section;
   }
 
-  function getCheatsheetSectionTitle(section) {
+  function getProfileSectionTitle(section) {
     if (!section) {
       return "";
     }
@@ -2473,7 +2473,7 @@
     section.items.push(item);
   }
 
-  function normalizeDraftKey(value) {
+  function normalizeMatchKey(value) {
     return compactText(value)
       .replace(/[()（）[\]【】<>《》"'“”‘’、,，。．·•\s|:：/\\-]/g, "")
       .replace(/[0-9]/g, "");
@@ -2512,7 +2512,7 @@
     return normalizeText(field?.label || field?.nearbyText || "", 80);
   }
 
-  function inferDraftSection(field) {
+  function inferMatchSection(field) {
     const text = compactText([field?.section, field?.nearbyText, field?.label].join(" "));
     if (!text) {
       return "";
@@ -2583,21 +2583,21 @@
 
     if (label) {
       aliases.add(label);
-      aliases.add(normalizeDraftKey(label));
+      aliases.add(normalizeMatchKey(label));
     }
     if (subsection) {
       aliases.add(subsection);
-      aliases.add(normalizeDraftKey(subsection));
+      aliases.add(normalizeMatchKey(subsection));
     }
     if (category) {
       aliases.add(category);
-      aliases.add(normalizeDraftKey(category));
+      aliases.add(normalizeMatchKey(category));
     }
 
-    const aliasList = PROFILE_LABEL_ALIASES[label] || PROFILE_LABEL_ALIASES[normalizeDraftKey(label)] || [];
+    const aliasList = PROFILE_LABEL_ALIASES[label] || PROFILE_LABEL_ALIASES[normalizeMatchKey(label)] || [];
     for (const alias of aliasList) {
       aliases.add(alias);
-      aliases.add(normalizeDraftKey(alias));
+      aliases.add(normalizeMatchKey(alias));
     }
 
     return Array.from(aliases).filter(Boolean);
@@ -2675,11 +2675,11 @@
   }
 
   function isExplanatoryField(text) {
-    return /原因|说明|理由|备注/.test(normalizeDraftKey(text));
+    return /原因|说明|理由|备注/.test(normalizeMatchKey(text));
   }
 
   function isExplanatoryEntry(text) {
-    return /原因|说明|理由|备注/.test(normalizeDraftKey(text));
+    return /原因|说明|理由|备注/.test(normalizeMatchKey(text));
   }
 
   function isCategoryCompatibleForMapping(fieldCategory, entryCategory) {
@@ -2710,7 +2710,7 @@
   }
 
   function getSemanticBucket(text, category = "") {
-    const key = normalizeDraftKey([category, text].join(" "));
+    const key = normalizeMatchKey([category, text].join(" "));
     if (!key) {
       return "";
     }
@@ -3144,23 +3144,23 @@
     const normalized = normalizeText(fieldLabel, 120);
     if (normalized) {
       labels.add(normalized);
-      labels.add(normalizeDraftKey(normalized));
+      labels.add(normalizeMatchKey(normalized));
     }
 
-    const base = normalizeDraftKey(normalized);
+    const base = normalizeMatchKey(normalized);
     const add = (values) => {
       for (const value of values || []) {
         const text = normalizeText(value, 120);
         if (text) {
           labels.add(text);
-          labels.add(normalizeDraftKey(text));
+          labels.add(normalizeMatchKey(text));
         }
       }
     };
 
     const mapped = [];
     for (const [key, aliases] of Object.entries(PROFILE_LABEL_ALIASES)) {
-      if (normalizeDraftKey(key) === base || key === normalized) {
+      if (normalizeMatchKey(key) === base || key === normalized) {
         mapped.push(key, ...aliases);
       }
     }
@@ -3169,7 +3169,7 @@
     return Array.from(labels).filter(Boolean);
   }
 
-  function scoreDraftCandidate(field, entry, fieldLabel, fieldCategory) {
+  function scoreAutofillCandidate(field, entry, fieldLabel, fieldCategory) {
     if (!field || !entry) {
       return 0;
     }
@@ -3253,7 +3253,7 @@
     return score;
   }
 
-  function guessDraftValueFieldType(field) {
+  function guessAutofillValueFieldType(field) {
     const labelText = compactText([field?.inferredLabel || inferFieldLabel(field), field?.label, field?.placeholder].join(" "));
     const contextText = compactText([field?.nearbyText, field?.section].join(" "));
     if (/开始时间|结束时间|出生日期|出生年月|取得毕业证时间|获取日期|取得时间|竞赛时间|获得时间|有效期/.test(labelText)) {
@@ -3316,20 +3316,20 @@
 
   function createAutofillCandidate(field, entry, score) {
     const fieldLabel = field?.inferredLabel || inferFieldLabel(field);
-    const fieldCategory = field?.inferredCategory || inferDraftSection(field);
+    const fieldCategory = field?.inferredCategory || inferMatchSection(field);
     const value = entry?.value == null ? "" : String(entry.value).trim();
     const confidence = score >= 40 ? Math.max(0, Math.min(0.99, 0.45 + score / 100)) : Math.max(0, score / 120);
     const text = compactText([fieldLabel, fieldCategory, field.nearbyText, field.placeholder, field.name, field.id].join(" "));
-    const writeMode = guessDraftValueFieldType(field);
-    const defaultSelectScore = field.hasCurrentValue ? 84 : 70;
-    const selectedByDefault =
-      score >= defaultSelectScore &&
+    const writeMode = guessAutofillValueFieldType(field);
+    const autoFillScoreThreshold = field.hasCurrentValue ? 84 : 70;
+    const shouldAutoFill =
+      score >= autoFillScoreThreshold &&
       value !== "" &&
       field.canFill &&
       !/上传|附件|照片|证件照|简历附件/.test(text);
 
     return {
-      id: `draft_${field.fieldId}`,
+      id: `candidate_${field.fieldId}`,
       fieldId: field.fieldId,
       field,
       fieldLabel,
@@ -3339,14 +3339,14 @@
       sourceSubsection: entry?.subsection || "",
       sourceItemId: entry?.itemId || "",
       value,
-      preview: formatDraftValue(value, 140),
+      preview: formatCandidateValue(value, 140),
       confidence,
       writeMode,
       mappingSource: "本地规则",
       reason: "",
-      selectedByDefault,
+      shouldAutoFill,
       canAutoFill: Boolean(value) && field.canFill && score >= 32,
-      warning: buildDraftWarning(field, entry, score, writeMode),
+      warning: buildCandidateWarning(field, entry, score, writeMode),
       score
     };
   }
@@ -3359,7 +3359,7 @@
     }
 
     const fieldLabel = field?.inferredLabel || inferFieldLabel(field);
-    const fieldCategory = field?.inferredCategory || inferDraftSection(field);
+    const fieldCategory = field?.inferredCategory || inferMatchSection(field);
     if (!isCategoryCompatibleForMapping(fieldCategory, entry.category)) {
       return null;
     }
@@ -3374,16 +3374,16 @@
     candidate.score = score;
     candidate.mappingSource = "AI 映射";
     candidate.reason = normalizeText(mapping.reason || "", 160);
-    candidate.selectedByDefault = confidence >= (field.hasCurrentValue ? 0.86 : 0.68) && Boolean(candidate.value) && field.canFill;
+    candidate.shouldAutoFill = confidence >= (field.hasCurrentValue ? 0.86 : 0.68) && Boolean(candidate.value) && field.canFill;
     candidate.canAutoFill = confidence >= 0.42 && Boolean(candidate.value) && field.canFill;
-    candidate.warning = buildAiDraftWarning(candidate, mapping);
+    candidate.warning = buildAiCandidateWarning(candidate, mapping);
     return candidate;
   }
 
-  function buildAiDraftWarning(candidate, mapping) {
+  function buildAiCandidateWarning(candidate, mapping) {
     const notes = [];
     if (candidate.field?.hasCurrentValue) {
-      notes.push(candidate.selectedByDefault ? "当前字段已有内容，写入时会覆盖" : "当前字段已有内容，默认不勾选");
+      notes.push(candidate.shouldAutoFill ? "当前字段已有内容，写入时会覆盖" : "当前字段已有内容，低置信度时不会自动覆盖");
     }
     if (candidate.writeMode !== "text") {
       notes.push(candidate.writeMode === "date" ? "日期字段需要核对格式" : "选择控件需要核对选项");
@@ -3397,13 +3397,13 @@
     return notes.join("；");
   }
 
-  function buildDraftWarning(field, entry, score, writeMode) {
+  function buildCandidateWarning(field, entry, score, writeMode) {
     const notes = [];
     if (!field.canFill) {
       notes.push("当前控件不可写入");
     }
     if (field.hasCurrentValue) {
-      notes.push(score >= 84 ? "当前字段已有内容，写入时会覆盖" : "当前字段已有内容，默认不勾选");
+      notes.push(score >= 84 ? "当前字段已有内容，写入时会覆盖" : "当前字段已有内容，低置信度时不会自动覆盖");
     }
     if (writeMode !== "text") {
       if (writeMode === "date") {
@@ -3421,7 +3421,7 @@
     return notes.join("；");
   }
 
-  function formatDraftValue(value, maxLength = 120) {
+  function formatCandidateValue(value, maxLength = 120) {
     if (value == null || value === "") {
       return "";
     }
@@ -3438,15 +3438,15 @@
     return normalizeText(String(value), maxLength);
   }
 
-  function buildAutofillDraft(scan) {
+  function buildAutofillPlan(scan) {
     const entries = getCurrentProfileEntries();
     const visibleFields = Array.isArray(scan?.fields) ? scan.fields.filter((field) => field && field.canFill) : [];
     const fieldCounters = new Map();
     const fieldTotals = new Map();
     const enrichedFields = visibleFields.map((field) => {
       const fieldLabel = inferFieldLabel(field);
-      const fieldCategory = inferDraftSection(field);
-      const occurrenceKey = `${fieldCategory || "未分类"}|${normalizeDraftKey(fieldLabel) || field.fieldId}`;
+      const fieldCategory = inferMatchSection(field);
+      const occurrenceKey = `${fieldCategory || "未分类"}|${normalizeMatchKey(fieldLabel) || field.fieldId}`;
       fieldTotals.set(occurrenceKey, (fieldTotals.get(occurrenceKey) || 0) + 1);
       return {
         ...field,
@@ -3459,7 +3459,7 @@
 
     for (const field of enrichedFields) {
       const fieldLabel = field.inferredLabel || inferFieldLabel(field);
-      const fieldCategory = field.inferredCategory || inferDraftSection(field);
+      const fieldCategory = field.inferredCategory || inferMatchSection(field);
       const nextOccurrenceIndex = (fieldCounters.get(field.occurrenceKey) || 0) + 1;
       fieldCounters.set(field.occurrenceKey, nextOccurrenceIndex);
       field.fieldOccurrenceIndex = nextOccurrenceIndex;
@@ -3472,7 +3472,7 @@
           continue;
         }
 
-        const score = scoreDraftCandidate(field, entry, fieldLabel, fieldCategory);
+        const score = scoreAutofillCandidate(field, entry, fieldLabel, fieldCategory);
         if (score > bestScore) {
           bestScore = score;
           bestEntry = entry;
@@ -3512,11 +3512,11 @@
       scan,
       entries,
       candidates,
-      selectedIds: new Set(candidates.filter((candidate) => candidate.selectedByDefault).map((candidate) => candidate.id))
+      autoFillIds: new Set(candidates.filter((candidate) => candidate.shouldAutoFill).map((candidate) => candidate.id))
     };
   }
 
-  function sortDraftCandidates(candidates) {
+  function sortAutofillCandidates(candidates) {
     return candidates.slice().sort((a, b) => {
       const left = AUTO_FILL_SECTION_ORDER.indexOf(a.fieldCategory);
       const right = AUTO_FILL_SECTION_ORDER.indexOf(b.fieldCategory);
@@ -3529,12 +3529,12 @@
     });
   }
 
-  function mergeAiCandidatesIntoDraft(draft, aiCandidates, notes = []) {
-    if (!draft || !Array.isArray(aiCandidates) || aiCandidates.length === 0) {
-      return draft;
+  function mergeAiCandidatesIntoPlan(plan, aiCandidates, notes = []) {
+    if (!plan || !Array.isArray(aiCandidates) || aiCandidates.length === 0) {
+      return plan;
     }
 
-    const byFieldId = new Map((draft.candidates || []).map((candidate) => [candidate.fieldId, candidate]));
+    const byFieldId = new Map((plan.candidates || []).map((candidate) => [candidate.fieldId, candidate]));
     for (const candidate of aiCandidates) {
       const existing = byFieldId.get(candidate.fieldId);
       if (!existing || candidate.confidence >= existing.confidence || existing.score < 70) {
@@ -3542,27 +3542,27 @@
       }
     }
 
-    const candidates = sortDraftCandidates(Array.from(byFieldId.values()));
+    const candidates = sortAutofillCandidates(Array.from(byFieldId.values()));
     return {
-      ...draft,
+      ...plan,
       mappingSource: "AI + 本地规则",
       aiNotes: notes,
       candidates,
-      selectedIds: new Set(candidates.filter((candidate) => candidate.selectedByDefault).map((candidate) => candidate.id))
+      autoFillIds: new Set(candidates.filter((candidate) => candidate.shouldAutoFill).map((candidate) => candidate.id))
     };
   }
 
-  async function enhanceDraftWithAi(scan, draft) {
-    const entries = Array.isArray(draft?.entries) ? draft.entries : getCurrentProfileEntries();
+  async function enhancePlanWithAi(scan, plan) {
+    const entries = Array.isArray(plan?.entries) ? plan.entries : getCurrentProfileEntries();
     const profileCatalog = buildProfileCatalogFromEntries(entries);
     if (profileCatalog.fields.length === 0) {
-      return { draft, status: "本机资料目录为空，已使用本地规则。", usedAi: false };
+      return { plan, status: "本机资料目录为空，已使用本地规则。", usedAi: false };
     }
 
     setAutofillProgress("AI 生成映射", 76, "只发送字段目录，不发送资料值");
-    setAssistantStatus("正在调用 AI 识别字段语义。只发送字段目录，不发送资料值...");
+    setProfilePanelStatus("正在调用 AI 识别字段语义。只发送字段目录，不发送资料值...");
     const response = await sendRuntimeMessage({
-      type: "AI_RESUME_MAP_FIELDS",
+      type: "OJAF_MAP_FIELDS",
       payload: {
         scan,
         profileCatalog
@@ -3573,11 +3573,11 @@
     const aiCandidates = mappings
       .map((mapping) => createAiAutofillCandidate(mapping, scan, entries))
       .filter(Boolean);
-    const enhancedDraft = mergeAiCandidatesIntoDraft(draft, aiCandidates, response?.notes || []);
+    const enhancedPlan = mergeAiCandidatesIntoPlan(plan, aiCandidates, response?.notes || []);
     setAutofillProgress("AI 生成映射", 86, `已合并 ${aiCandidates.length} 项`);
 
     return {
-      draft: enhancedDraft,
+      plan: enhancedPlan,
       status: `AI 已映射 ${aiCandidates.length} 项，已和本地规则合并。`,
       usedAi: true
     };
@@ -3586,9 +3586,9 @@
   async function enhanceScanWithAi(scan) {
     try {
       setAutofillProgress("AI 分析页面结构", 50, "只发送字段信息，不发送资料值");
-      setAssistantStatus("正在分析页面结构，只发送字段信息...");
+      setProfilePanelStatus("正在分析页面结构，只发送字段信息...");
       const response = await sendRuntimeMessage({
-        type: "AI_RESUME_ANALYZE_PAGE_STRUCTURE",
+        type: "OJAF_ANALYZE_PAGE_STRUCTURE",
         payload: {
           scan
         }
@@ -3651,7 +3651,7 @@
     if (ownsRun) {
       runId = startAutofillRun("扫描页面并准备填写");
       if (!runId) {
-        setAssistantStatus("当前已有扫描任务在运行，请稍候。", true);
+        setProfilePanelStatus("当前已有扫描任务在运行，请稍候。", true);
         return { ok: false, reason: "busy" };
       }
     } else if (!isCurrentAutofillRun(runId)) {
@@ -3662,42 +3662,42 @@
       setAutofillProgress("读取本机资料", 8, "正在加载本机简历资料");
       await refreshCurrentProfile({ force: true });
       setAutofillProgress("扫描当前页面", 24, "展开可编辑区域并提取字段");
-      setAssistantStatus("正在扫描当前页面并准备自动填写...");
+      setProfilePanelStatus("正在扫描当前页面并准备自动填写...");
       const baseScan = await scanForm();
       setAutofillProgress("分析页面结构", 42, `已发现 ${baseScan.fields.length} 个可见字段`);
       const aiStructure = await enhanceScanWithAi(baseScan);
       const scan = aiStructure.scan || baseScan;
       setAutofillProgress("匹配本地资料", 64, `正在匹配 ${scan.fields.length} 个字段`);
-      let draft = buildAutofillDraft(scan);
+      let plan = buildAutofillPlan(scan);
       let aiStatus = "未调用 AI。";
 
       try {
         setAutofillProgress("AI 生成映射", 76, "只发送字段目录，不发送资料值");
-        const aiResult = await enhanceDraftWithAi(scan, draft);
-        draft = aiResult.draft || draft;
+        const aiResult = await enhancePlanWithAi(scan, plan);
+        plan = aiResult.plan || plan;
         aiStatus = aiResult.status || aiStatus;
       } catch (error) {
         aiStatus = `AI 映射不可用，已回退本地规则：${error.message}`;
       }
 
-      setAutofillProgress("整理匹配结果", 90, `已匹配 ${draft.candidates.length} 项`);
+      setAutofillProgress("整理匹配结果", 90, `已匹配 ${plan.candidates.length} 项`);
 
-      const selectedCount = draft.selectedIds.size;
-      setAssistantStatus(
-        draft.candidates.length > 0
-          ? `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 已匹配 ${draft.candidates.length} 项，将直接写入 ${selectedCount} 项。`
+      const autoFillCount = plan.autoFillIds.size;
+      setProfilePanelStatus(
+        plan.candidates.length > 0
+          ? `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 已匹配 ${plan.candidates.length} 项，将直接写入 ${autoFillCount} 项。`
           : `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 没有找到可自动匹配的字段。`
       );
       setAutofillProgress("匹配完成", 90, "准备写入当前网页");
       return {
         ok: true,
-        draft,
+        plan,
         aiStatus,
-        selectedCount
+        autoFillCount
       };
     } catch (error) {
-      renderAssistantPanel();
-      setAssistantStatus(`准备填写失败：${error.message}`, true);
+      renderProfilePanel();
+      setProfilePanelStatus(`准备填写失败：${error.message}`, true);
       return { ok: false, reason: error.message };
     } finally {
       if (ownsRun) {
@@ -3709,89 +3709,89 @@
   async function runOneClickAutofill() {
     const runId = startAutofillRun("开始填写");
     if (!runId) {
-      setAssistantStatus("当前已有填写任务在运行，请稍候。", true);
+      setProfilePanelStatus("当前已有填写任务在运行，请稍候。", true);
       return { ok: false, reason: "busy" };
     }
 
     try {
       clearMarks();
-      setAssistantStatus("正在扫描页面并准备一键填写...");
+      setProfilePanelStatus("正在扫描页面并准备一键填写...");
       const planResult = await generateAutofillPlan({ runId, continueRun: true });
       if (!planResult?.ok) {
         return planResult || { ok: false, reason: "plan failed" };
       }
 
-      const draft = planResult.draft;
-      const selectedIds = draft?.selectedIds instanceof Set
-        ? draft.selectedIds
-        : new Set(Array.isArray(draft?.selectedIds) ? draft.selectedIds : []);
+      const plan = planResult.plan;
+      const autoFillIds = plan?.autoFillIds instanceof Set
+        ? plan.autoFillIds
+        : new Set(Array.isArray(plan?.autoFillIds) ? plan.autoFillIds : []);
 
-      if (!draft || selectedIds.size === 0) {
-        setAssistantStatus("没有找到可直接填写的字段。可以打开详情面板手动查看和复制资料。", true);
-        const skippedCount = await markUnselectedDraftCandidates(draft, selectedIds);
+      if (!plan || autoFillIds.size === 0) {
+        setProfilePanelStatus("没有找到可直接填写的字段。可以打开详情面板手动查看和复制资料。", true);
+        const skippedCount = await markDeferredPlanCandidates(plan, autoFillIds);
         setAutofillSummary({
           attempted: 0,
           filled: 0,
           failed: 0,
-          skipped: skippedCount || draft?.candidates?.length || 0,
-          total: draft?.candidates?.length || 0,
+          skipped: skippedCount || plan?.candidates?.length || 0,
+          total: plan?.candidates?.length || 0,
           message: "没有找到高置信度可直填字段，黄色标记需要人工确认。"
         });
         return { ok: false, reason: "no candidates" };
       }
 
-      setAutofillProgress("写入匹配项", 94, `准备写入 ${selectedIds.size} 项`);
-      const beforeCount = selectedIds.size;
-      const fillResult = await applyAutofillPlan(draft, selectedIds, { runId });
-      if (assistantVisible) {
-        renderAssistantPanel();
+      setAutofillProgress("写入匹配项", 94, `准备写入 ${autoFillIds.size} 项`);
+      const beforeCount = autoFillIds.size;
+      const fillResult = await applyAutofillPlan(plan, autoFillIds, { runId });
+      if (profilePanelVisible) {
+        renderProfilePanel();
       }
       if (!fillResult?.ok) {
         return fillResult || { ok: false, reason: "fill failed" };
       }
       return {
         ok: true,
-        selected: beforeCount,
+        autoFilled: beforeCount,
         filled: fillResult.filled || 0,
         failed: fillResult.failed || 0,
         skipped: fillResult.skipped || 0,
         total: fillResult.total || 0
       };
     } catch (error) {
-      setAssistantStatus(`一键填写失败：${error.message}`, true);
+      setProfilePanelStatus(`一键填写失败：${error.message}`, true);
       throw error;
     } finally {
       clearAutofillProgress();
     }
   }
 
-  async function applyAutofillPlan(draft, selectedIds, options = {}) {
+  async function applyAutofillPlan(plan, autoFillIds, options = {}) {
     const runId = Number(options.runId || 0);
     if (autofillInProgress && !isCurrentAutofillRun(runId)) {
-      setAssistantStatus("当前正在处理其他填写任务，请稍候。", true);
+      setProfilePanelStatus("当前正在处理其他填写任务，请稍候。", true);
       return { ok: false, reason: "busy" };
     }
 
-    const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
-    if (!draft || selected.size === 0) {
-      setAssistantStatus("没有找到可直接写入的匹配项。", true);
-      return { ok: false, reason: "no selection" };
+    const autoFillSet = autoFillIds instanceof Set ? autoFillIds : new Set(autoFillIds || []);
+    if (!plan || autoFillSet.size === 0) {
+      setProfilePanelStatus("没有找到可直接写入的匹配项。", true);
+      return { ok: false, reason: "no autofill candidates" };
     }
 
-    const selectedCandidates = draft.candidates.filter((candidate) => selected.has(candidate.id));
-    if (selectedCandidates.length === 0) {
-      setAssistantStatus("没有找到可写入项。", true);
-      return { ok: false, reason: "empty selection" };
+    const autoFillCandidates = plan.candidates.filter((candidate) => autoFillSet.has(candidate.id));
+    if (autoFillCandidates.length === 0) {
+      setProfilePanelStatus("没有找到可写入项。", true);
+      return { ok: false, reason: "empty autofill candidates" };
     }
 
-    setAssistantStatus("正在把匹配项写入当前网页...");
+    setProfilePanelStatus("正在把匹配项写入当前网页...");
     if (isCurrentAutofillRun(runId)) {
-      setAutofillProgress("写入匹配项", 94, `准备写入 ${selectedCandidates.length} 项`);
+      setAutofillProgress("写入匹配项", 94, `准备写入 ${autoFillCandidates.length} 项`);
     }
     const results = [];
 
-    for (let index = 0; index < selectedCandidates.length; index += 1) {
-      const candidate = selectedCandidates[index];
+    for (let index = 0; index < autoFillCandidates.length; index += 1) {
+      const candidate = autoFillCandidates[index];
       const field = candidate.field;
       let element = await resolveFieldElement(field);
       let ok = false;
@@ -3810,8 +3810,8 @@
       }
 
       if (isCurrentAutofillRun(runId)) {
-        const percent = 94 + Math.round(((index + 1) / selectedCandidates.length) * 6);
-        setAutofillProgress("写入匹配项", percent, `已处理 ${index + 1}/${selectedCandidates.length} 项`);
+        const percent = 94 + Math.round(((index + 1) / autoFillCandidates.length) * 6);
+        setAutofillProgress("写入匹配项", percent, `已处理 ${index + 1}/${autoFillCandidates.length} 项`);
       }
 
       results.push({
@@ -3823,37 +3823,37 @@
 
     const filledCount = results.filter((result) => result.ok).length;
     const failedCount = results.length - filledCount;
-    const skippedCount = await markUnselectedDraftCandidates(draft, selected);
-    setAssistantStatus(`已尝试写入 ${results.length} 项，成功 ${filledCount} 项，需人工确认 ${skippedCount} 项。`);
+    const skippedCount = await markDeferredPlanCandidates(plan, autoFillSet);
+    setProfilePanelStatus(`已尝试写入 ${results.length} 项，成功 ${filledCount} 项，需人工确认 ${skippedCount} 项。`);
     setAutofillSummary({
       attempted: results.length,
       filled: filledCount,
       failed: failedCount,
       skipped: skippedCount,
-      total: draft?.candidates?.length || results.length,
+      total: plan?.candidates?.length || results.length,
       message: `页面已标记：绿色为已填写，黄色为需确认，红色为失败。`
     });
-    await persistAssistantState(getAssistantStateSnapshot());
+    await persistProfilePanelState(getProfilePanelStateSnapshot());
     return {
       ok: true,
       attempted: results.length,
       filled: filledCount,
       failed: failedCount,
       skipped: skippedCount,
-      total: draft?.candidates?.length || results.length,
+      total: plan?.candidates?.length || results.length,
       results
     };
   }
 
-  async function markUnselectedDraftCandidates(draft, selectedIds) {
-    if (!draft || !Array.isArray(draft.candidates)) {
+  async function markDeferredPlanCandidates(plan, autoFillIds) {
+    if (!plan || !Array.isArray(plan.candidates)) {
       return 0;
     }
 
-    const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+    const autoFillSet = autoFillIds instanceof Set ? autoFillIds : new Set(autoFillIds || []);
     let count = 0;
-    for (const candidate of draft.candidates) {
-      if (selected.has(candidate.id)) {
+    for (const candidate of plan.candidates) {
+      if (autoFillSet.has(candidate.id)) {
         continue;
       }
       const element = findFieldElement(candidate.field);
@@ -3892,7 +3892,7 @@
     const isChoiceField = candidate?.writeMode === "choice" || /选择|请选择|下拉|选择项|单选/.test(text);
 
     if (candidate?.writeMode === "date") {
-      setNativeValue(element, normalizeDateDraftValue(value));
+      setNativeValue(element, normalizeDateValue(value));
       return { ok: true };
     }
 
@@ -4048,7 +4048,7 @@
   }
 
   function normalizeChoiceLabel(value) {
-    return normalizeDraftKey(value);
+    return normalizeMatchKey(value);
   }
 
   function normalizeChoiceValue(value, fallback = "") {
@@ -4065,7 +4065,7 @@
     return text;
   }
 
-  function normalizeDateDraftValue(value) {
+  function normalizeDateValue(value) {
     const text = normalizeText(value, 80);
     if (!text) {
       return "";
@@ -4250,28 +4250,28 @@
     }
 
     const activeSection = !filterText
-      ? sections.find((section) => section.category === activeCheatsheetCategory)
+      ? sections.find((section) => section.category === activeProfileCategory)
       : null;
 
     if (activeSection) {
-      renderCheatsheetDetail(list, activeSection);
+      renderProfileReferenceDetail(list, activeSection);
       return;
     }
 
     if (filterText) {
-      renderCheatsheetSearchResults(list, sections);
+      renderProfileReferenceSearchResults(list, sections);
       return;
     }
 
-    renderCheatsheetOverview(list, sections);
+    renderProfileReferenceOverview(list, sections);
   }
 
-  function renderCheatsheetOverview(root, sections) {
+  function renderProfileReferenceOverview(root, sections) {
     const overview = document.createElement("div");
     overview.className = "arf-overview";
 
     for (const section of sections) {
-      const displayTitle = getCheatsheetSectionTitle(section);
+      const displayTitle = getProfileSectionTitle(section);
       const button = document.createElement("button");
       button.type = "button";
       button.className = "arf-category-card";
@@ -4283,7 +4283,7 @@
       title.textContent = displayTitle;
       const note = document.createElement("div");
       note.className = "arf-category-note";
-      note.textContent = summarizeCheatsheetSection(section);
+      note.textContent = summarizeProfileSection(section);
       main.append(title, note);
 
       const count = document.createElement("div");
@@ -4292,8 +4292,8 @@
 
       button.append(main, count);
       button.addEventListener("click", () => {
-        activeCheatsheetCategory = section.category;
-        renderAndSaveAssistantPanel();
+        activeProfileCategory = section.category;
+        renderAndSaveProfilePanel();
       });
       overview.append(button);
     }
@@ -4301,7 +4301,7 @@
     root.append(overview);
   }
 
-  function renderCheatsheetSearchResults(root, sections) {
+  function renderProfileReferenceSearchResults(root, sections) {
     const head = document.createElement("div");
     head.className = "arf-detail-head";
     const title = document.createElement("div");
@@ -4312,11 +4312,11 @@
     root.append(head);
 
     for (const section of sections) {
-      renderCheatsheetSectionRows(root, section, { compactTitle: true });
+      renderProfileReferenceRows(root, section, { compactTitle: true });
     }
   }
 
-  function renderCheatsheetDetail(root, section) {
+  function renderProfileReferenceDetail(root, section) {
     const head = document.createElement("div");
     head.className = "arf-detail-head";
 
@@ -4325,20 +4325,20 @@
     back.className = "arf-back";
     back.textContent = "返回";
     back.addEventListener("click", () => {
-      activeCheatsheetCategory = "";
-      renderAndSaveAssistantPanel();
+      activeProfileCategory = "";
+      renderAndSaveProfilePanel();
     });
 
     const title = document.createElement("div");
     title.className = "arf-detail-title";
-    title.textContent = `${getCheatsheetSectionTitle(section) || section.category} · ${section.items.length} 条`;
+    title.textContent = `${getProfileSectionTitle(section) || section.category} · ${section.items.length} 条`;
     head.append(back, title);
     root.append(head);
 
-    renderCheatsheetSectionRows(root, section);
+    renderProfileReferenceRows(root, section);
   }
 
-  function renderCheatsheetSectionRows(root, section, options = {}) {
+  function renderProfileReferenceRows(root, section, options = {}) {
     const groups = groupItemsBySubsection(section.items);
     for (const group of groups) {
       const card = document.createElement("div");
@@ -4346,7 +4346,7 @@
 
       const subtitle = document.createElement("div");
       subtitle.className = "arf-subsection-title";
-      subtitle.textContent = group.subsection || (options.compactTitle ? getCheatsheetSectionTitle(section) || section.category : "详情");
+      subtitle.textContent = group.subsection || (options.compactTitle ? getProfileSectionTitle(section) || section.category : "详情");
       card.append(subtitle);
 
       for (const item of group.items) {
@@ -4383,7 +4383,7 @@
     return groups;
   }
 
-  function summarizeCheatsheetSection(section) {
+  function summarizeProfileSection(section) {
     const filled = section.items.filter((item) => item.hasValue);
     const source = filled.length > 0 ? filled : section.items;
     const labels = source.slice(0, 5).map((item) => item.label).join("、");
@@ -4394,22 +4394,22 @@
   }
 
   async function copyActiveCategory() {
-    const section = getCurrentProfileSections().find((item) => item.category === activeCheatsheetCategory);
+    const section = getCurrentProfileSections().find((item) => item.category === activeProfileCategory);
     if (!section) {
-      setAssistantStatus("先点进一个分类，再复制本类内容。", true);
+      setProfilePanelStatus("先点进一个分类，再复制本类内容。", true);
       return;
     }
 
     try {
-      await copyTextToClipboard(formatCheatsheetSectionForCopy(section));
-      setAssistantStatus(`已复制：${getCheatsheetSectionTitle(section) || section.category}`);
+      await copyTextToClipboard(formatProfileSectionForCopy(section));
+      setProfilePanelStatus(`已复制：${getProfileSectionTitle(section) || section.category}`);
     } catch (error) {
-      setAssistantStatus(`复制失败：${error.message}`, true);
+      setProfilePanelStatus(`复制失败：${error.message}`, true);
     }
   }
 
-  function formatCheatsheetSectionForCopy(section) {
-    const title = getCheatsheetSectionTitle(section) || section.category;
+  function formatProfileSectionForCopy(section) {
+    const title = getProfileSectionTitle(section) || section.category;
     const lines = [`## ${title}`];
     for (const group of groupItemsBySubsection(section.items)) {
       if (group.subsection) {
@@ -4422,8 +4422,8 @@
     return `${lines.join("\n").trim()}\n`;
   }
 
-  function renderAssistantPanel() {
-    const panel = ensureAssistantPanel();
+  function renderProfilePanel() {
+    const panel = ensureProfilePanel();
     const status = panel.querySelector('[data-role="status"]');
     const collapseBtn = panel.querySelector('[data-action="collapse"]');
     const homeBtn = panel.querySelector('[data-action="home"]');
@@ -4434,15 +4434,15 @@
     const progressStage = panel.querySelector('[data-role="progress-stage"]');
     const progressDetail = panel.querySelector('[data-role="progress-detail"]');
     const sections = getCurrentProfileSections();
-    const activeSection = sections.find((section) => section.category === activeCheatsheetCategory);
+    const activeSection = sections.find((section) => section.category === activeProfileCategory);
     const inProgress = Boolean(autofillInProgress || autofillProgress.active);
-    if (activeCheatsheetCategory && !activeSection) {
-      activeCheatsheetCategory = "";
+    if (activeProfileCategory && !activeSection) {
+      activeProfileCategory = "";
     }
-    panel.setAttribute(PANEL_COLLAPSED_ATTR, assistantCollapsed ? "true" : "false");
+    panel.setAttribute(PANEL_COLLAPSED_ATTR, profilePanelCollapsed ? "true" : "false");
     if (collapseBtn) {
-      collapseBtn.textContent = assistantCollapsed ? "资料" : "收起";
-      collapseBtn.title = assistantCollapsed ? "展开 OpenJobAutofill 资料面板" : "收起 OpenJobAutofill 资料面板";
+      collapseBtn.textContent = profilePanelCollapsed ? "资料" : "收起";
+      collapseBtn.title = profilePanelCollapsed ? "展开 OpenJobAutofill 资料面板" : "收起 OpenJobAutofill 资料面板";
     }
     if (copyCategoryBtn) {
       copyCategoryBtn.disabled = !activeSection;
@@ -4470,7 +4470,7 @@
         status.textContent = `${adapterLabel}${autofillProgress.stage || "正在处理"}，请不要重复点击。`;
       } else {
         status.textContent = activeSection
-          ? `${adapterLabel}正在查看：${getCheatsheetSectionTitle(activeSection) || activeSection.category}。内容可直接选中复制。`
+          ? `${adapterLabel}正在查看：${getProfileSectionTitle(activeSection) || activeSection.category}。内容可直接选中复制。`
           : totalItems > 0
             ? `${adapterLabel}已加载 ${sections.length} 个分类、${totalItems} 条本地资料。`
             : `${adapterLabel}资料只从本机读取。`;
@@ -4509,13 +4509,13 @@
       }
 
       currentProfileV2 = changes.profileV2.newValue || null;
-      if (assistantVisible) {
-        renderAssistantPanel();
+      if (profilePanelVisible) {
+        renderProfilePanel();
       }
     });
   }
 
-  void restoreAssistantState();
+  void restoreProfilePanelState();
 
   function setNativeValue(element, value) {
     const stringValue = value == null ? "" : String(value);
@@ -4744,21 +4744,21 @@
   }
 
   async function handleContentMessage(message) {
-    if (message.type === "AI_RESUME_SHOW_FIELD_ASSISTANT") {
-      showAssistant();
-      renderAssistantPanel();
+    if (message.type === "OJAF_SHOW_PROFILE_PANEL") {
+      showProfilePanel();
+      renderProfilePanel();
       return { visible: true };
     }
 
-    if (message.type === "AI_RESUME_START_AUTOFILL") {
+    if (message.type === "OJAF_START_AUTOFILL") {
       return runOneClickAutofill();
     }
 
-    if (message.type === "AI_RESUME_GET_RUNTIME_STATE") {
+    if (message.type === "OJAF_GET_RUNTIME_STATE") {
       return getAutofillRuntimeState();
     }
 
-    if (message.type === "AI_RESUME_CLEAR_MARKS") {
+    if (message.type === "OJAF_CLEAR_MARKS") {
       clearMarks();
       return {};
     }
@@ -4767,7 +4767,7 @@
   }
 
   const messageHandler = (message, _sender, sendResponse) => {
-    if (!message || typeof message.type !== "string" || !message.type.startsWith("AI_RESUME_")) {
+    if (!message || typeof message.type !== "string" || !message.type.startsWith("OJAF_")) {
       return undefined;
     }
 
@@ -4786,9 +4786,9 @@
     return true;
   };
 
-  if (window.__AI_RESUME_AUTOFILL_MESSAGE_HANDLER__) {
-    chrome.runtime.onMessage.removeListener(window.__AI_RESUME_AUTOFILL_MESSAGE_HANDLER__);
+  if (window.__OJAF_AUTOFILL_MESSAGE_HANDLER__) {
+    chrome.runtime.onMessage.removeListener(window.__OJAF_AUTOFILL_MESSAGE_HANDLER__);
   }
-  window.__AI_RESUME_AUTOFILL_MESSAGE_HANDLER__ = messageHandler;
+  window.__OJAF_AUTOFILL_MESSAGE_HANDLER__ = messageHandler;
   chrome.runtime.onMessage.addListener(messageHandler);
 })();

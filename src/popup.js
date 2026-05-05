@@ -2,7 +2,7 @@ const els = {
   status: document.getElementById("status"),
   openOptions: document.getElementById("openOptions"),
   startAutofillBtn: document.getElementById("startAutofillBtn"),
-  showAssistantBtn: document.getElementById("showAssistantBtn"),
+  showProfilePanelBtn: document.getElementById("showProfilePanelBtn"),
   clearMarksBtn: document.getElementById("clearMarksBtn")
 };
 
@@ -12,8 +12,8 @@ els.openOptions.addEventListener("click", () => chrome.runtime.openOptionsPage()
 els.startAutofillBtn.addEventListener("click", () => {
   void startAutofill();
 });
-els.showAssistantBtn.addEventListener("click", () => {
-  void showAssistant();
+els.showProfilePanelBtn.addEventListener("click", () => {
+  void showProfilePanel();
 });
 els.clearMarksBtn.addEventListener("click", () => {
   void clearMarks();
@@ -32,7 +32,7 @@ async function initialize() {
 
 async function syncRuntimeState(options = {}) {
   try {
-    const response = await sendToActiveTab({ type: "AI_RESUME_GET_RUNTIME_STATE" });
+    const response = await sendToActiveTab({ type: "OJAF_GET_RUNTIME_STATE" });
     applyRuntimeState(response?.data || {}, options);
   } catch {
     els.startAutofillBtn.disabled = false;
@@ -68,9 +68,9 @@ function applyRuntimeState(state = {}, options = {}) {
   }
 }
 
-async function showAssistant() {
+async function showProfilePanel() {
   try {
-    await sendToActiveTab({ type: "AI_RESUME_SHOW_FIELD_ASSISTANT" });
+    await sendToActiveTab({ type: "OJAF_SHOW_PROFILE_PANEL" });
     setStatus("已打开右侧资料栏。");
     await syncRuntimeState({ updateStatus: false });
   } catch (error) {
@@ -83,7 +83,7 @@ async function startAutofill() {
     els.startAutofillBtn.disabled = true;
     els.startAutofillBtn.textContent = "扫描中...";
     setStatus("正在开始填写；如果已配置 API，AI 会在分析和映射阶段参与。");
-    const response = await sendToActiveTab({ type: "AI_RESUME_START_AUTOFILL" });
+    const response = await sendToActiveTab({ type: "OJAF_START_AUTOFILL" });
     const data = response?.data || {};
     if (data.ok) {
       if (data.filled != null) {
@@ -111,7 +111,7 @@ async function startAutofill() {
 
 async function clearMarks() {
   try {
-    await sendToActiveTab({ type: "AI_RESUME_CLEAR_MARKS" });
+    await sendToActiveTab({ type: "OJAF_CLEAR_MARKS" });
     setStatus("已清除当前页面的填写标记。");
     await syncRuntimeState({ updateStatus: false });
   } catch (error) {
