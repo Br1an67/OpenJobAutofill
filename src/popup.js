@@ -89,12 +89,12 @@ async function startAutofill() {
       if (data.filled != null) {
         setStatus(`已完成一键填写：成功 ${data.filled || 0} 项，需确认 ${data.skipped || 0} 项，失败 ${data.failed || 0} 项。AI 只在分析和映射阶段参与，写入阶段为本地执行。`);
       } else {
-        setStatus("已生成草稿。页面上的黄色标记需要人工确认，也可以点“查看详情”。如果已配置 API，AI 只在分析和映射阶段参与。");
+        setStatus("已完成扫描处理。页面上的黄色标记需要人工确认，也可以打开右侧资料栏查看和复制资料。");
       }
     } else if (data.reason === "cancelled") {
       setStatus("已取消写入。");
     } else if (data.reason === "no candidates") {
-      setStatus("没有找到高置信度可直填字段。页面上的黄色标记需要人工确认，也可以点“查看详情”。如果已配置 API，AI 只在分析和映射阶段参与。");
+      setStatus("没有找到高置信度可直填字段。可以打开右侧资料栏查看和复制资料。AI 只在分析和映射阶段参与。");
     } else if (data.reason === "busy") {
       setStatus("当前已有扫描任务在运行，请稍候。", true);
     } else if (data.reason) {

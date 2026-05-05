@@ -1,5 +1,5 @@
 (() => {
-  const SCRIPT_VERSION = "0.8.1-cleanup";
+  const SCRIPT_VERSION = "0.8.2-direct-fill";
 
   if (window.__AI_RESUME_AUTOFILL_VERSION__ === SCRIPT_VERSION) {
     return;
@@ -29,9 +29,6 @@
   let currentSiteAdapter = null;
   let sidebarFilter = "";
   let activeCheatsheetCategory = "";
-  let draftViewActive = false;
-  let currentAutofillDraft = null;
-  let draftSelectedIds = new Set();
   let autofillInProgress = false;
   let autofillProgress = { active: false, stage: "", percent: 0, detail: "" };
   let autofillSummary = null;
@@ -478,9 +475,6 @@
       assistantCollapsed,
       sidebarFilter,
       activeCheatsheetCategory,
-      draftViewActive,
-      currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-      draftSelectedIds: Array.from(draftSelectedIds),
       autofillInProgress,
       autofillProgress: { ...autofillProgress },
       autofillSummary: autofillSummary ? { ...autofillSummary } : null
@@ -492,10 +486,7 @@
       assistantVisible,
       assistantCollapsed,
       sidebarFilter,
-      activeCheatsheetCategory,
-      draftViewActive,
-      currentAutofillDraft: serializeAutofillDraft(currentAutofillDraft),
-      draftSelectedIds: Array.from(draftSelectedIds)
+      activeCheatsheetCategory
     };
   }
 
@@ -512,7 +503,6 @@
   }
 
   function goAssistantHome() {
-    draftViewActive = false;
     activeCheatsheetCategory = "";
     sidebarFilter = "";
     renderAndSaveAssistantPanel("已返回主页。");
@@ -587,16 +577,6 @@
       assistantCollapsed = Boolean(state.assistantCollapsed);
       sidebarFilter = normalizeText(state.sidebarFilter || "", 80);
       activeCheatsheetCategory = normalizeText(state.activeCheatsheetCategory || "", 80);
-      draftViewActive = Boolean(state.draftViewActive);
-      if (state.currentAutofillDraft) {
-        const restoredDraft = deserializeAutofillDraft(state.currentAutofillDraft);
-        currentAutofillDraft = restoredDraft;
-        draftSelectedIds = new Set(
-          Array.isArray(state.draftSelectedIds) && state.draftSelectedIds.length > 0
-            ? state.draftSelectedIds
-            : Array.from(restoredDraft?.selectedIds || [])
-        );
-      }
 
       if (assistantVisible) {
         const panel = ensureAssistantPanel();
@@ -1703,107 +1683,6 @@
         flex-direction: column;
         gap: 10px;
       }
-      #${PANEL_ID} .arf-draft-card {
-        padding: 12px;
-        border: 1px solid #e2d8c8;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.82);
-      }
-      #${PANEL_ID} .arf-draft-head {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      #${PANEL_ID} .arf-draft-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: #26231e;
-      }
-      #${PANEL_ID} .arf-draft-note {
-        margin-top: 4px;
-        color: #7a7164;
-        font-size: 12px;
-        line-height: 1.45;
-      }
-      #${PANEL_ID} .arf-draft-back {
-        min-height: 30px;
-        padding: 0 10px;
-        border: 1px solid #ded6c8;
-        border-radius: 10px;
-        background: #fff;
-        color: #4b463f;
-        cursor: pointer;
-      }
-      #${PANEL_ID} .arf-draft-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      #${PANEL_ID} .arf-draft-row {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 9px;
-        padding: 10px;
-        border: 1px solid #e7dfd1;
-        border-radius: 13px;
-        background: #fffdf8;
-      }
-      #${PANEL_ID} .arf-draft-row.is-disabled {
-        opacity: 0.62;
-      }
-      #${PANEL_ID} .arf-draft-check {
-        width: 16px;
-        height: 16px;
-        margin-top: 3px;
-      }
-      #${PANEL_ID} .arf-draft-main {
-        min-width: 0;
-      }
-      #${PANEL_ID} .arf-draft-line {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        min-width: 0;
-      }
-      #${PANEL_ID} .arf-draft-target {
-        min-width: 0;
-        color: #26231e;
-        font-size: 13px;
-        font-weight: 700;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      #${PANEL_ID} .arf-draft-confidence {
-        flex: none;
-        padding: 1px 7px;
-        border-radius: 999px;
-        background: rgba(15, 107, 79, 0.12);
-        color: #0f6b4f;
-        font-size: 10px;
-        font-weight: 700;
-      }
-      #${PANEL_ID} .arf-draft-source,
-      #${PANEL_ID} .arf-draft-warning {
-        margin-top: 4px;
-        color: #7a7164;
-        font-size: 12px;
-        line-height: 1.45;
-      }
-      #${PANEL_ID} .arf-draft-value {
-        margin-top: 5px;
-        color: #3d372f;
-        font-size: 12px;
-        line-height: 1.45;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      #${PANEL_ID} .arf-draft-warning {
-        color: #9a650f;
-      }
       #${PANEL_ID} .arf-overview {
         display: grid;
         grid-template-columns: 1fr;
@@ -1933,9 +1812,6 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px;
       }
-      #${PANEL_ID} .arf-actions.arf-draft-actions {
-        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-      }
       #${PANEL_ID} .arf-actions button {
         min-height: 34px;
         border: 0;
@@ -2057,7 +1933,6 @@
       floating.hidden = true;
     });
     floating.querySelector('[data-action="float-detail"]')?.addEventListener("click", () => {
-      draftViewActive = Boolean(currentAutofillDraft);
       showAssistant();
       renderAssistantPanel();
     });
@@ -2202,7 +2077,7 @@
     const subtitle = document.createElement("div");
     subtitle.className = "arf-subtitle";
     subtitle.dataset.role = "subtitle";
-    subtitle.textContent = "本机简历资料。可生成填充草稿，确认后只把选中项写入当前网页。";
+    subtitle.textContent = "本机简历资料。用于查看、搜索和复制，开始填写会直接扫描并写入当前网页。";
     titleWrap.append(title, subtitle);
 
     const headerActions = document.createElement("div");
@@ -2304,29 +2179,7 @@
     const footer = document.createElement("div");
     footer.className = "arf-footer";
 
-    const draftActions = document.createElement("div");
-    draftActions.className = "arf-actions arf-draft-actions";
-
-    const generateDraftBtn = document.createElement("button");
-    generateDraftBtn.type = "button";
-    generateDraftBtn.dataset.action = "generate-draft";
-    generateDraftBtn.textContent = "生成填充草稿";
-    generateDraftBtn.addEventListener("click", () => {
-      void generateAutofillDraft();
-    });
-
-    const applyDraftBtn = document.createElement("button");
-    applyDraftBtn.type = "button";
-    applyDraftBtn.className = "secondary";
-    applyDraftBtn.dataset.action = "apply-draft";
-    applyDraftBtn.textContent = "填入选中项";
-    applyDraftBtn.disabled = true;
-    applyDraftBtn.addEventListener("click", () => {
-      void applySelectedDraftItems();
-    });
-
-    draftActions.append(generateDraftBtn, applyDraftBtn);
-    footer.append(status, progress, draftActions, actions);
+    footer.append(status, progress, actions);
 
     body.append(searchInput, content);
     panel.append(header, body, footer);
@@ -2649,7 +2502,7 @@
           cleaned &&
           cleaned.length <= 80 &&
           /[\u4e00-\u9fa5A-Za-z]/.test(cleaned) &&
-          !/请输入|请选择|上传文件|内容列表|搜索分类或内容|OpenJobAutofill|填充草稿/.test(cleaned)
+          !/请输入|请选择|上传文件|内容列表|搜索分类或内容|OpenJobAutofill/.test(cleaned)
         ) {
           return cleaned.replace(/^[*•\s]+/, "");
         }
@@ -3699,58 +3552,6 @@
     };
   }
 
-  function serializeAutofillDraft(draft) {
-    if (!draft) {
-      return null;
-    }
-
-    return {
-      ...draft,
-      scan: draft.scan
-        ? {
-            ...draft.scan,
-            fields: Array.isArray(draft.scan.fields)
-              ? draft.scan.fields.map((field) => ({ ...field }))
-              : []
-          }
-        : null,
-      entries: Array.isArray(draft.entries) ? draft.entries.map((entry) => ({ ...entry })) : [],
-      candidates: Array.isArray(draft.candidates)
-        ? draft.candidates.map((candidate) => ({
-            ...candidate,
-            field: candidate.field ? { ...candidate.field } : null
-          }))
-        : [],
-      selectedIds: Array.from(draft.selectedIds || [])
-    };
-  }
-
-  function deserializeAutofillDraft(draft) {
-    if (!draft) {
-      return null;
-    }
-
-    return {
-      ...draft,
-      scan: draft.scan
-        ? {
-            ...draft.scan,
-            fields: Array.isArray(draft.scan.fields)
-              ? draft.scan.fields.map((field) => ({ ...field }))
-              : []
-          }
-        : null,
-      entries: Array.isArray(draft.entries) ? draft.entries.map((entry) => ({ ...entry })) : [],
-      candidates: Array.isArray(draft.candidates)
-        ? draft.candidates.map((candidate) => ({
-            ...candidate,
-            field: candidate.field ? { ...candidate.field } : null
-          }))
-        : [],
-      selectedIds: new Set(Array.isArray(draft.selectedIds) ? draft.selectedIds : [])
-    };
-  }
-
   async function enhanceDraftWithAi(scan, draft) {
     const entries = Array.isArray(draft?.entries) ? draft.entries : getCurrentProfileEntries();
     const profileCatalog = buildProfileCatalogFromEntries(entries);
@@ -3843,12 +3644,12 @@
     }
   }
 
-  async function generateAutofillDraft(options = {}) {
+  async function generateAutofillPlan(options = {}) {
     const ownsRun = !options.continueRun;
     let runId = Number(options.runId || 0);
 
     if (ownsRun) {
-      runId = startAutofillRun("扫描页面并生成草稿");
+      runId = startAutofillRun("扫描页面并准备填写");
       if (!runId) {
         setAssistantStatus("当前已有扫描任务在运行，请稍候。", true);
         return { ok: false, reason: "busy" };
@@ -3861,12 +3662,12 @@
       setAutofillProgress("读取本机资料", 8, "正在加载本机简历资料");
       await refreshCurrentProfile({ force: true });
       setAutofillProgress("扫描当前页面", 24, "展开可编辑区域并提取字段");
-      setAssistantStatus("正在扫描当前页面并生成本地填充草稿...");
+      setAssistantStatus("正在扫描当前页面并准备自动填写...");
       const baseScan = await scanForm();
       setAutofillProgress("分析页面结构", 42, `已发现 ${baseScan.fields.length} 个可见字段`);
       const aiStructure = await enhanceScanWithAi(baseScan);
       const scan = aiStructure.scan || baseScan;
-      setAutofillProgress("匹配本地资料", 64, `正在生成 ${scan.fields.length} 个字段的草稿`);
+      setAutofillProgress("匹配本地资料", 64, `正在匹配 ${scan.fields.length} 个字段`);
       let draft = buildAutofillDraft(scan);
       let aiStatus = "未调用 AI。";
 
@@ -3879,22 +3680,15 @@
         aiStatus = `AI 映射不可用，已回退本地规则：${error.message}`;
       }
 
-      setAutofillProgress("整理草稿", 90, `已匹配 ${draft.candidates.length} 项`);
-      currentAutofillDraft = draft;
-      draftSelectedIds = draft.selectedIds;
-      draftViewActive = true;
-      activeCheatsheetCategory = "";
-      sidebarFilter = "";
-      renderAssistantPanel();
-      await persistAssistantState(getAssistantStateSnapshot());
+      setAutofillProgress("整理匹配结果", 90, `已匹配 ${draft.candidates.length} 项`);
 
-      const selectedCount = draftSelectedIds.size;
+      const selectedCount = draft.selectedIds.size;
       setAssistantStatus(
         draft.candidates.length > 0
-          ? `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 已生成 ${draft.candidates.length} 条草稿，默认勾选 ${selectedCount} 条。`
-          : `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 没有找到可自动匹配的草稿项。`
+          ? `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 已匹配 ${draft.candidates.length} 项，将直接写入 ${selectedCount} 项。`
+          : `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 没有找到可自动匹配的字段。`
       );
-      setAutofillProgress("草稿已就绪", 100, "可以返回主页或继续写入");
+      setAutofillProgress("匹配完成", 90, "准备写入当前网页");
       return {
         ok: true,
         draft,
@@ -3902,11 +3696,8 @@
         selectedCount
       };
     } catch (error) {
-      currentAutofillDraft = null;
-      draftSelectedIds = new Set();
-      draftViewActive = false;
       renderAssistantPanel();
-      setAssistantStatus(`生成草稿失败：${error.message}`, true);
+      setAssistantStatus(`准备填写失败：${error.message}`, true);
       return { ok: false, reason: error.message };
     } finally {
       if (ownsRun) {
@@ -3925,38 +3716,38 @@
     try {
       clearMarks();
       setAssistantStatus("正在扫描页面并准备一键填写...");
-      const draftResult = await generateAutofillDraft({ runId, continueRun: true });
-      if (!draftResult?.ok) {
-        return draftResult || { ok: false, reason: "draft failed" };
+      const planResult = await generateAutofillPlan({ runId, continueRun: true });
+      if (!planResult?.ok) {
+        return planResult || { ok: false, reason: "plan failed" };
       }
 
-      if (!currentAutofillDraft || draftSelectedIds.size === 0) {
-        setAssistantStatus("没有找到可直接填写的字段。已切换到草稿视图。", true);
-        draftViewActive = true;
-        if (assistantVisible) {
-          renderAssistantPanel();
-        }
-        const skippedCount = await markUnselectedDraftCandidates(draftSelectedIds);
+      const draft = planResult.draft;
+      const selectedIds = draft?.selectedIds instanceof Set
+        ? draft.selectedIds
+        : new Set(Array.isArray(draft?.selectedIds) ? draft.selectedIds : []);
+
+      if (!draft || selectedIds.size === 0) {
+        setAssistantStatus("没有找到可直接填写的字段。可以打开详情面板手动查看和复制资料。", true);
+        const skippedCount = await markUnselectedDraftCandidates(draft, selectedIds);
         setAutofillSummary({
           attempted: 0,
           filled: 0,
           failed: 0,
-          skipped: skippedCount || currentAutofillDraft?.candidates?.length || 0,
-          total: currentAutofillDraft?.candidates?.length || 0,
+          skipped: skippedCount || draft?.candidates?.length || 0,
+          total: draft?.candidates?.length || 0,
           message: "没有找到高置信度可直填字段，黄色标记需要人工确认。"
         });
         return { ok: false, reason: "no candidates" };
       }
 
-      setAutofillProgress("写入选中项", 94, `准备写入 ${draftSelectedIds.size} 项`);
-      const beforeCount = draftSelectedIds.size;
-      const fillResult = await applySelectedDraftItems({ runId, skipConfirm: true });
-      draftViewActive = true;
+      setAutofillProgress("写入匹配项", 94, `准备写入 ${selectedIds.size} 项`);
+      const beforeCount = selectedIds.size;
+      const fillResult = await applyAutofillPlan(draft, selectedIds, { runId });
       if (assistantVisible) {
         renderAssistantPanel();
       }
       if (!fillResult?.ok) {
-        return fillResult || { ok: false, reason: "fill cancelled" };
+        return fillResult || { ok: false, reason: "fill failed" };
       }
       return {
         ok: true,
@@ -3974,164 +3765,28 @@
     }
   }
 
-  function syncDraftSelection(id, checked) {
-    if (!id) {
-      return;
-    }
-
-    if (checked) {
-      draftSelectedIds.add(id);
-    } else {
-      draftSelectedIds.delete(id);
-    }
-    updateDraftActionButtonState();
-    queueAssistantStateSave();
-  }
-
-  function updateDraftActionButtonState() {
-    const panel = assistantPanel && document.contains(assistantPanel) ? assistantPanel : null;
-    if (!panel) {
-      return;
-    }
-
-    const applyBtn = panel.querySelector('[data-action="apply-draft"]');
-    if (applyBtn) {
-      applyBtn.disabled = !currentAutofillDraft || draftSelectedIds.size === 0;
-    }
-  }
-
-  function renderAutofillDraftList(root) {
-    const draft = currentAutofillDraft;
-    if (!draft) {
-      const empty = document.createElement("div");
-      empty.className = "arf-empty";
-      empty.textContent = "还没有生成草稿。点击“生成填充草稿”开始本地匹配。";
-      root.append(empty);
-      return;
-    }
-
-    const head = document.createElement("div");
-    head.className = "arf-draft-card";
-
-    const titleRow = document.createElement("div");
-    titleRow.className = "arf-draft-head";
-
-    const titleWrap = document.createElement("div");
-    const title = document.createElement("div");
-    title.className = "arf-draft-title";
-    title.textContent = `填充草稿 · ${draft.candidates.length} 项`;
-    const note = document.createElement("div");
-    note.className = "arf-draft-note";
-    note.textContent = `${draft.mappingSource || "本地规则"}。默认勾选高置信度且当前为空的字段，上传和提交不会自动处理。`;
-    titleWrap.append(title, note);
-
-    const back = document.createElement("button");
-    back.type = "button";
-    back.className = "arf-draft-back";
-    back.textContent = "返回主页";
-    back.title = "返回资料主页";
-    back.addEventListener("click", goAssistantHome);
-
-    titleRow.append(titleWrap, back);
-    head.append(titleRow);
-
-    const list = document.createElement("div");
-    list.className = "arf-draft-list";
-
-    if (draft.candidates.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "arf-empty";
-      empty.textContent = "没有匹配到可写入项。可以返回资料分类，或者检查本机资料是否包含对应字段。";
-      head.append(empty);
-      root.append(head);
-      return;
-    }
-
-    for (const candidate of draft.candidates) {
-      const row = document.createElement("label");
-      row.className = `arf-draft-row${candidate.canAutoFill ? "" : " is-disabled"}`;
-      row.dataset.draftId = candidate.id;
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.className = "arf-draft-check";
-      checkbox.checked = draftSelectedIds.has(candidate.id);
-      checkbox.disabled = !candidate.field?.canFill || !candidate.value;
-      checkbox.addEventListener("change", () => {
-        syncDraftSelection(candidate.id, checkbox.checked);
-      });
-
-      const main = document.createElement("div");
-      main.className = "arf-draft-main";
-
-      const line = document.createElement("div");
-      line.className = "arf-draft-line";
-
-      const target = document.createElement("div");
-      target.className = "arf-draft-target";
-      target.textContent = candidate.fieldLabel || inferFieldLabel(candidate.field) || "未命名字段";
-
-      const confidence = document.createElement("div");
-      confidence.className = "arf-draft-confidence";
-      confidence.textContent = `${Math.round(candidate.confidence * 100)}%`;
-
-      line.append(target, confidence);
-
-      const source = document.createElement("div");
-      source.className = "arf-draft-source";
-      source.textContent = `${candidate.mappingSource || "本地规则"}：${candidate.sourceCategory || "资料"}${candidate.sourceSubsection ? ` / ${candidate.sourceSubsection}` : ""}${candidate.sourceLabel ? ` · ${candidate.sourceLabel}` : ""}`;
-
-      const value = document.createElement("div");
-      value.className = "arf-draft-value";
-      value.textContent = candidate.preview || "未填写";
-
-      main.append(line, source, value);
-
-      if (candidate.warning) {
-        const warning = document.createElement("div");
-        warning.className = "arf-draft-warning";
-        warning.textContent = candidate.warning;
-        main.append(warning);
-      }
-
-      row.append(checkbox, main);
-      list.append(row);
-    }
-
-    head.append(list);
-    root.append(head);
-  }
-
-  async function applySelectedDraftItems(options = {}) {
+  async function applyAutofillPlan(draft, selectedIds, options = {}) {
     const runId = Number(options.runId || 0);
     if (autofillInProgress && !isCurrentAutofillRun(runId)) {
       setAssistantStatus("当前正在处理其他填写任务，请稍候。", true);
       return { ok: false, reason: "busy" };
     }
 
-    if (!currentAutofillDraft || draftSelectedIds.size === 0) {
-      setAssistantStatus("先生成草稿，再勾选要写入的项目。", true);
-      return { ok: false, reason: "no draft or no selection" };
+    const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+    if (!draft || selected.size === 0) {
+      setAssistantStatus("没有找到可直接写入的匹配项。", true);
+      return { ok: false, reason: "no selection" };
     }
 
-    const selectedCandidates = currentAutofillDraft.candidates.filter((candidate) => draftSelectedIds.has(candidate.id));
+    const selectedCandidates = draft.candidates.filter((candidate) => selected.has(candidate.id));
     if (selectedCandidates.length === 0) {
-      setAssistantStatus("没有勾选任何可写入项。", true);
+      setAssistantStatus("没有找到可写入项。", true);
       return { ok: false, reason: "empty selection" };
     }
 
-    const shouldConfirm = !options.skipConfirm;
-    const confirmed = shouldConfirm
-      ? window.confirm(`将把本地资料写入当前网页的 ${selectedCandidates.length} 个字段。是否继续？`)
-      : true;
-    if (!confirmed) {
-      setAssistantStatus("已取消写入。");
-      return { ok: false, reason: "cancelled" };
-    }
-
-    setAssistantStatus("正在写入选中项到当前网页...");
+    setAssistantStatus("正在把匹配项写入当前网页...");
     if (isCurrentAutofillRun(runId)) {
-      setAutofillProgress("写入选中项", 94, `准备写入 ${selectedCandidates.length} 项`);
+      setAutofillProgress("写入匹配项", 94, `准备写入 ${selectedCandidates.length} 项`);
     }
     const results = [];
 
@@ -4151,12 +3806,12 @@
       }
 
       if (element) {
-        markElement(element, ok ? "filled" : "error", `草稿写入: ${candidate.fieldLabel || candidate.sourceLabel || candidate.id}`);
+        markElement(element, ok ? "filled" : "error", `自动填写: ${candidate.fieldLabel || candidate.sourceLabel || candidate.id}`);
       }
 
       if (isCurrentAutofillRun(runId)) {
         const percent = 94 + Math.round(((index + 1) / selectedCandidates.length) * 6);
-        setAutofillProgress("写入选中项", percent, `已处理 ${index + 1}/${selectedCandidates.length} 项`);
+        setAutofillProgress("写入匹配项", percent, `已处理 ${index + 1}/${selectedCandidates.length} 项`);
       }
 
       results.push({
@@ -4168,14 +3823,14 @@
 
     const filledCount = results.filter((result) => result.ok).length;
     const failedCount = results.length - filledCount;
-    const skippedCount = await markUnselectedDraftCandidates(draftSelectedIds);
+    const skippedCount = await markUnselectedDraftCandidates(draft, selected);
     setAssistantStatus(`已尝试写入 ${results.length} 项，成功 ${filledCount} 项，需人工确认 ${skippedCount} 项。`);
     setAutofillSummary({
       attempted: results.length,
       filled: filledCount,
       failed: failedCount,
       skipped: skippedCount,
-      total: currentAutofillDraft?.candidates?.length || results.length,
+      total: draft?.candidates?.length || results.length,
       message: `页面已标记：绿色为已填写，黄色为需确认，红色为失败。`
     });
     await persistAssistantState(getAssistantStateSnapshot());
@@ -4185,19 +3840,19 @@
       filled: filledCount,
       failed: failedCount,
       skipped: skippedCount,
-      total: currentAutofillDraft?.candidates?.length || results.length,
+      total: draft?.candidates?.length || results.length,
       results
     };
   }
 
-  async function markUnselectedDraftCandidates(selectedIds) {
-    if (!currentAutofillDraft || !Array.isArray(currentAutofillDraft.candidates)) {
+  async function markUnselectedDraftCandidates(draft, selectedIds) {
+    if (!draft || !Array.isArray(draft.candidates)) {
       return 0;
     }
 
     const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
     let count = 0;
-    for (const candidate of currentAutofillDraft.candidates) {
+    for (const candidate of draft.candidates) {
       if (selected.has(candidate.id)) {
         continue;
       }
@@ -4555,22 +4210,6 @@
     return options;
   }
 
-  function applyDraftSelectionSnapshot() {
-    const panel = assistantPanel && document.contains(assistantPanel) ? assistantPanel : null;
-    if (!panel || !currentAutofillDraft) {
-      return;
-    }
-
-    panel.querySelectorAll('[data-draft-id]').forEach((row) => {
-      const id = row.dataset.draftId;
-      const checkbox = row.querySelector('input[type="checkbox"]');
-      if (checkbox && id) {
-        checkbox.checked = draftSelectedIds.has(id);
-      }
-    });
-    updateDraftActionButtonState();
-  }
-
   function renderQuickCopyList(panel) {
     const list = panel.querySelector('[data-role="quick-copy-list"]');
     if (!list) {
@@ -4578,11 +4217,6 @@
     }
 
     list.textContent = "";
-
-    if (draftViewActive) {
-      renderAutofillDraftList(list);
-      return;
-    }
 
     if (!hasCurrentProfileData()) {
       const empty = document.createElement("div");
@@ -4794,8 +4428,6 @@
     const collapseBtn = panel.querySelector('[data-action="collapse"]');
     const homeBtn = panel.querySelector('[data-action="home"]');
     const copyCategoryBtn = panel.querySelector('[data-action="copy-category"]');
-    const generateDraftBtn = panel.querySelector('[data-action="generate-draft"]');
-    const applyDraftBtn = panel.querySelector('[data-action="apply-draft"]');
     const searchInput = panel.querySelector('[data-role="quick-copy-search"]');
     const progress = panel.querySelector('[data-role="progress"]');
     const progressFill = panel.querySelector('[data-role="progress-fill"]');
@@ -4818,17 +4450,6 @@
     if (homeBtn) {
       homeBtn.disabled = false;
     }
-    if (generateDraftBtn) {
-      generateDraftBtn.textContent = inProgress
-        ? "扫描中..."
-        : draftViewActive
-          ? "重新生成草稿"
-          : "生成填充草稿";
-      generateDraftBtn.disabled = inProgress;
-    }
-    if (applyDraftBtn) {
-      applyDraftBtn.disabled = inProgress || !currentAutofillDraft || draftSelectedIds.size === 0;
-    }
     if (searchInput && searchInput.value !== sidebarFilter) {
       searchInput.value = sidebarFilter;
     }
@@ -4847,9 +4468,6 @@
       const adapterLabel = adapter ? `${adapter.name || adapter.id || "通用"} · ` : "";
       if (autofillProgress.active) {
         status.textContent = `${adapterLabel}${autofillProgress.stage || "正在处理"}，请不要重复点击。`;
-      } else if (draftViewActive && currentAutofillDraft) {
-        const selectedCount = draftSelectedIds.size;
-        status.textContent = `${adapterLabel}草稿模式：已匹配 ${currentAutofillDraft.candidates.length} 项，已勾选 ${selectedCount} 项。`;
       } else {
         status.textContent = activeSection
           ? `${adapterLabel}正在查看：${getCheatsheetSectionTitle(activeSection) || activeSection.category}。内容可直接选中复制。`
@@ -4860,9 +4478,6 @@
     }
 
     renderQuickCopyList(panel);
-    if (draftViewActive) {
-      applyDraftSelectionSnapshot();
-    }
     if (!currentProfileV2 && !currentProfileLoadPromise) {
       void refreshCurrentProfile();
     }
