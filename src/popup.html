@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>简历资料小抄</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>资料小抄</h1>
+          <p id="pageInfo">当前页面未激活</p>
+        </div>
+        <button id="openOptions" class="ghost" type="button">设置</button>
+      </header>
+
+      <section class="panel">
+        <button id="startAutofillBtn" type="button">开始填写</button>
+        <button id="showAssistantBtn" class="secondary" type="button">查看详情 / 资料小抄</button>
+        <button id="clearMarksBtn" class="ghost full" type="button">清除页面标记</button>
+      </section>
+
+      <section class="panel muted">
+        <div id="status">点击开始填写后会在页面右下角显示进度。填写成功为绿框，需人工确认是黄框，失败是红框。</div>
+      </section>
+
+      <section class="panel">
+        <h2>怎么用</h2>
+        <p class="hint">在设置页维护 Markdown 资料。AI 只看页面字段和资料目录，不接收简历具体值；侧边栏只作为详情和兜底面板。</p>
+      </section>
+    </main>
+
+    <script src="./popup.js"></script>
+  </body>
+</html>

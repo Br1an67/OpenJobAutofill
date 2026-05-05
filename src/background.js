@@ -1,0 +1,1435 @@
+const DEFAULT_PROFILE = {
+  basic: {
+    name: "",
+    gender: "",
+    birthDate: "",
+    ethnicity: "",
+    politicalStatus: "",
+    nativePlace: "",
+    hukou: "",
+    currentAddress: "",
+    heightCm: "",
+    weightKg: "",
+    email: "",
+    phone: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    expectedAnnualSalaryWan: ""
+  },
+  education: [],
+  experiences: [],
+  campus: [],
+  family: {
+    father: {
+      relationship: "父亲",
+      name: "",
+      birthDate: "",
+      gender: "男",
+      politicalStatus: "",
+      educationLevel: "",
+      employer: "",
+      title: "",
+      phone: "",
+      note: ""
+    },
+    mother: {
+      relationship: "母亲",
+      name: "",
+      birthDate: "",
+      gender: "女",
+      politicalStatus: "",
+      educationLevel: "",
+      employer: "",
+      title: "",
+      phone: "",
+      note: ""
+    }
+  },
+  certificates: [],
+  awards: [],
+  customFields: {
+    basic: []
+  },
+  other: {
+    languageLevel: "",
+    languageScore: "",
+    hobbyCategory: "",
+    hobbyDetail: "",
+    selfEvaluation: "",
+    source: "",
+    hasDriverLicense: "",
+    acceptsTransfer: ""
+  },
+  declarations: {
+    relativesInCompany: "否",
+    majorDisease: "否",
+    outsideEmploymentOrEquity: "否",
+    badRecord: "否",
+    overseasResidency: "否"
+  }
+};
+
+const DEFAULT_API_CONFIG = {
+  mode: "openai-compatible",
+  baseUrl: "https://api.openai.com/v1",
+  endpointPath: "/chat/completions",
+  apiKey: "",
+  model: "your-model-name",
+  useJsonResponseFormat: false,
+  extraHeadersJson: "{}",
+  customUrl: "",
+  customMethod: "POST",
+  customHeadersJson: "{}",
+  customBodyTemplate:
+    '{\n  "model": {{modelJson}},\n  "messages": {{messagesJson}},\n  "temperature": 0\n}',
+  customResponsePath: "choices.0.message.content"
+};
+
+const STORAGE_KEYS = {
+  profile: "profile",
+  profileMarkdown: "profileMarkdown",
+  apiConfig: "apiConfig"
+};
+
+const POPUP_STATE_KEY = "AI_RESUME_POPUP_STATE";
+const ASSISTANT_STATE_KEY = "AI_RESUME_ASSISTANT_STATE";
+const MAX_ASSISTANT_STATE_ITEMS = 20;
+
+const BASIC_FIELD_DEFS = [
+  ["name", "姓名", "姓名 / 名字 / 真实姓名"],
+  ["gender", "性别", "性别"],
+  ["birthDate", "出生日期", "生日 / 出生年月"],
+  ["ethnicity", "民族", "民族"],
+  ["politicalStatus", "政治面貌", "政治面貌"],
+  ["nativePlace", "籍贯", "籍贯"],
+  ["hukou", "生源户口", "户口 / 生源地"],
+  ["currentAddress", "当前居住地", "现居住地 / 通讯地址"],
+  ["heightCm", "净身高(cm)", "身高"],
+  ["weightKg", "体重(kg)", "体重"],
+  ["email", "电子邮箱", "邮箱 / Email"],
+  ["phone", "手机号码", "手机号 / 联系电话"],
+  ["emergencyContactName", "紧急联系人", "紧急联系人姓名"],
+  ["emergencyContactPhone", "紧急联系人电话", "紧急联系人手机号"],
+  ["expectedAnnualSalaryWan", "期望年收入(万元)", "期望薪资 / 期望年薪"]
+];
+
+const EDUCATION_FIELD_DEFS = [
+  ["type", "教育类型", "全日制 / 非全日制"],
+  ["startDate", "开始时间", "入学时间"],
+  ["endDate", "结束时间", "毕业时间"],
+  ["school", "毕业院校", "学校 / 院校"],
+  ["major", "专业", "所学专业"],
+  ["gpaRank", "绩点排名", "成绩排名 / GPA"],
+  ["educationLevel", "学历", "学历层次"],
+  ["degree", "学位", "学位"],
+  ["graduationStatus", "毕(结、肄)业", "毕业状态"],
+  ["certificateNumber", "学历证书号", "毕业证书编号"],
+  ["isHighest", "最高学历", "是否最高学历"],
+  ["isTransferredUndergrad", "是否专升本", "专升本"],
+  ["isOverseas", "是否海外学历", "海外学历"]
+];
+
+const EXPERIENCE_FIELD_DEFS = [
+  ["startDate", "开始时间", "实践开始时间"],
+  ["endDate", "结束时间", "实践结束时间"],
+  ["organization", "实习/实践单位", "单位 / 公司 / 项目单位"],
+  ["role", "实习岗位", "岗位 / 职位 / 角色"],
+  ["supervisor", "证明人", "证明人"],
+  ["supervisorPhone", "证明人联系方式", "证明人电话"],
+  ["description", "实践内容与收获", "工作内容 / 项目描述 / 经历描述"]
+];
+
+const CAMPUS_FIELD_DEFS = [
+  ["startDate", "开始时间", "社团开始时间"],
+  ["endDate", "结束时间", "社团结束时间"],
+  ["organization", "组织名称", "社团 / 组织"],
+  ["role", "职务", "职务 / 角色"],
+  ["description", "工作职责或活动描述", "职责 / 活动描述"]
+];
+
+const FAMILY_FIELD_DEFS = [
+  ["relationship", "关系", "亲属关系"],
+  ["name", "姓名", "亲属姓名"],
+  ["birthDate", "出生日期", "亲属出生日期"],
+  ["gender", "性别", "亲属性别"],
+  ["politicalStatus", "政治面貌", "亲属政治面貌"],
+  ["educationLevel", "学历", "亲属学历"],
+  ["employer", "工作单位", "亲属工作单位"],
+  ["title", "职务", "亲属职务"],
+  ["phone", "联系电话", "亲属联系电话"],
+  ["note", "备注", "亲属备注"]
+];
+
+const CERTIFICATE_FIELD_DEFS = [
+  ["name", "证书名称", "证书 / 资格证书"],
+  ["date", "取得时间", "证书取得时间"],
+  ["issuer", "颁发单位", "发证机构"],
+  ["level", "等级/分数", "证书等级 / 分数"],
+  ["number", "证书编号", "证书编号"],
+  ["note", "备注", "证书备注"]
+];
+
+const AWARD_FIELD_DEFS = [
+  ["name", "奖惩名称", "奖励 / 奖项名称"],
+  ["date", "奖惩时间", "获奖时间"],
+  ["organization", "奖惩单位", "颁奖单位 / 奖惩单位"],
+  ["level", "奖惩层级", "级别 / 层级"],
+  ["cancelDate", "奖惩解除时间", "解除时间"],
+  ["reason", "奖惩原因", "获奖原因 / 奖惩原因"]
+];
+
+const OTHER_FIELD_DEFS = [
+  ["languageLevel", "外语水平", "英语水平 / 外语等级"],
+  ["languageScore", "分数", "外语分数"],
+  ["hobbyCategory", "特长爱好类别", "爱好类别"],
+  ["hobbyDetail", "特长爱好具体内容", "爱好 / 特长"],
+  ["selfEvaluation", "自我评价", "个人评价 / 自我介绍"],
+  ["source", "招聘信息来源", "信息来源"],
+  ["hasDriverLicense", "是否获得机动车驾驶证", "驾驶证"],
+  ["acceptsTransfer", "是否接受调剂", "接受调剂"]
+];
+
+const DECLARATION_FIELD_DEFS = [
+  ["relativesInCompany", "是否存在亲属在应聘单位工作", "亲属任职 / 回避关系"],
+  ["majorDisease", "是否患有影响工作的疾病", "疾病声明"],
+  ["outsideEmploymentOrEquity", "是否在第三方企业任职或持股", "兼职 / 持股"],
+  ["badRecord", "是否存在不良行为记录", "不良记录"],
+  ["overseasResidency", "是否享有境外长期或永久居留权", "境外居留权"]
+];
+
+const DEFAULT_PROFILE_MARKDOWN = profileToMarkdown(DEFAULT_PROFILE);
+
+chrome.runtime.onInstalled.addListener(async () => {
+  const existing = await chrome.storage.local.get([
+    STORAGE_KEYS.profile,
+    STORAGE_KEYS.profileMarkdown,
+    STORAGE_KEYS.apiConfig
+  ]);
+  const next = {};
+
+  if (!existing[STORAGE_KEYS.profile]) {
+    next[STORAGE_KEYS.profile] = DEFAULT_PROFILE;
+  }
+
+  if (!existing[STORAGE_KEYS.profileMarkdown]) {
+    next[STORAGE_KEYS.profileMarkdown] = profileToMarkdown(existing[STORAGE_KEYS.profile] || DEFAULT_PROFILE);
+  }
+
+  if (!existing[STORAGE_KEYS.apiConfig]) {
+    next[STORAGE_KEYS.apiConfig] = DEFAULT_API_CONFIG;
+  }
+
+  if (Object.keys(next).length > 0) {
+    await chrome.storage.local.set(next);
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!message || typeof message.type !== "string" || !message.type.startsWith("AI_RESUME_")) {
+    return undefined;
+  }
+
+  handleMessage(message)
+    .then((data) => sendResponse({ ok: true, data }))
+    .catch((error) => {
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    });
+
+  return true;
+});
+
+async function handleMessage(message) {
+  switch (message.type) {
+    case "AI_RESUME_GET_SETTINGS":
+      return getSettings();
+    case "AI_RESUME_OPEN_OPTIONS":
+      await chrome.runtime.openOptionsPage();
+      return {};
+    case "AI_RESUME_SAVE_SETTINGS":
+      return saveSettings(message.payload || {});
+    case "AI_RESUME_CLEAR_SETTINGS":
+      return clearSettings();
+    case "AI_RESUME_MAP_FIELDS":
+      return mapFields(message.payload || {});
+    case "AI_RESUME_ANALYZE_PAGE_STRUCTURE":
+      return analyzePageStructure(message.payload || {});
+    case "AI_RESUME_SAVE_ASSISTANT_STATE":
+      return saveAssistantState(message.payload || {});
+    case "AI_RESUME_GET_ASSISTANT_STATE":
+      return getAssistantState(message.payload || {});
+    case "AI_RESUME_LIST_MODELS":
+      return listModels(message.payload || {});
+    case "AI_RESUME_TEST_CONNECTION":
+    case "AI_RESUME_TEST_API":
+      return testApi(message.payload || {});
+    default:
+      throw new Error(`Unknown message type: ${message.type}`);
+  }
+}
+
+async function getSettings() {
+  const values = await chrome.storage.local.get([
+    STORAGE_KEYS.profile,
+    STORAGE_KEYS.profileMarkdown,
+    STORAGE_KEYS.apiConfig
+  ]);
+  const profile = values[STORAGE_KEYS.profile] || DEFAULT_PROFILE;
+  return {
+    profile,
+    profileMarkdown: values[STORAGE_KEYS.profileMarkdown] || profileToMarkdown(profile),
+    apiConfig: { ...DEFAULT_API_CONFIG, ...(values[STORAGE_KEYS.apiConfig] || {}) },
+    defaults: {
+      profile: DEFAULT_PROFILE,
+      profileMarkdown: DEFAULT_PROFILE_MARKDOWN,
+      apiConfig: DEFAULT_API_CONFIG
+    }
+  };
+}
+
+async function saveSettings(payload) {
+  const next = {};
+
+  if (payload.profile) {
+    next[STORAGE_KEYS.profile] = payload.profile;
+  }
+
+  if (typeof payload.profileMarkdown === "string") {
+    next[STORAGE_KEYS.profileMarkdown] = payload.profileMarkdown;
+  }
+
+  if (payload.apiConfig) {
+    next[STORAGE_KEYS.apiConfig] = { ...DEFAULT_API_CONFIG, ...payload.apiConfig };
+  }
+
+  await chrome.storage.local.set(next);
+  return { saved: Object.keys(next) };
+}
+
+async function clearSettings() {
+  await chrome.storage.local.remove([STORAGE_KEYS.profile, STORAGE_KEYS.profileMarkdown, STORAGE_KEYS.apiConfig]);
+  return { cleared: true };
+}
+
+async function savePopupSessionState(pageKey, patch) {
+  if (!pageKey || !chrome.storage.session) {
+    return;
+  }
+
+  try {
+    const result = await chrome.storage.session.get(POPUP_STATE_KEY);
+    const allStates = result[POPUP_STATE_KEY] || {};
+    allStates[pageKey] = {
+      ...(allStates[pageKey] || {}),
+      pageKey,
+      ...patch,
+      updatedAt: Date.now()
+    };
+    await chrome.storage.session.set({ [POPUP_STATE_KEY]: allStates });
+  } catch {
+    // Session state is only for popup continuity; API mapping should not fail if it cannot be cached.
+  }
+}
+
+async function saveAssistantState(payload) {
+  const pageKey = normalizeAssistantStateKey(payload.pageKey || "");
+  if (!pageKey || !chrome.storage.session) {
+    return { saved: false };
+  }
+
+  const patch = isPlainObject(payload.patch) ? payload.patch : {};
+  const result = await chrome.storage.session.get(ASSISTANT_STATE_KEY);
+  const allStates = result[ASSISTANT_STATE_KEY] || {};
+  allStates[pageKey] = {
+    ...(allStates[pageKey] || {}),
+    pageKey,
+    ...patch,
+    updatedAt: Date.now()
+  };
+
+  const entries = Object.entries(allStates)
+    .sort((left, right) => Number(right[1]?.updatedAt || 0) - Number(left[1]?.updatedAt || 0))
+    .slice(0, MAX_ASSISTANT_STATE_ITEMS);
+  await chrome.storage.session.set({ [ASSISTANT_STATE_KEY]: Object.fromEntries(entries) });
+  return { saved: true };
+}
+
+async function getAssistantState(payload) {
+  const pageKey = normalizeAssistantStateKey(payload.pageKey || "");
+  if (!pageKey || !chrome.storage.session) {
+    return null;
+  }
+
+  const result = await chrome.storage.session.get(ASSISTANT_STATE_KEY);
+  return result[ASSISTANT_STATE_KEY]?.[pageKey] || null;
+}
+
+function normalizeAssistantStateKey(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 800);
+}
+
+async function mapFields(payload) {
+  const { scan } = payload;
+  if (!scan || !Array.isArray(scan.fields)) {
+    throw new Error("Missing scan result. Scan the current form first.");
+  }
+
+  const pageKey = String(payload.pageKey || "");
+  const pageInfo = `${scan.hostname || "当前页面"}，发现 ${scan.fields.length} 个可见字段`;
+
+  try {
+    const settings = await getSettings();
+    const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
+    const profileCatalog = normalizeProvidedProfileCatalog(payload.profileCatalog) || buildProfileFieldCatalog(payload.profile || settings.profile);
+
+    const compactScan = {
+      url: scan.url,
+      hostname: scan.hostname,
+      title: scan.title,
+      fields: scan.fields.map(compactField)
+    };
+
+    await savePopupSessionState(pageKey, {
+      pageInfo,
+      lastScan: compactScan,
+      lastMappings: [],
+      status: "正在调用 AI 生成字段映射...",
+      statusIsError: false
+    });
+
+    const messages = buildMessages(profileCatalog, compactScan);
+    const rawContent = await callAi(apiConfig, messages, {
+      profile: profileCatalog,
+      profileCatalog,
+      scan: compactScan
+    });
+    const parsed = parseJsonFromText(rawContent);
+    const mappings = annotateMappingsWithCatalog(normalizeAiMappings(parsed, compactScan.fields), profileCatalog);
+    const result = {
+      mappings,
+      notes: Array.isArray(parsed?.notes) ? parsed.notes : [],
+      raw: parsed
+    };
+
+    await savePopupSessionState(pageKey, {
+      pageInfo,
+      lastScan: compactScan,
+      lastMappings: mappings,
+      status: `AI 映射完成：${mappings.length} 个字段。先看预览，再填充。`,
+      statusIsError: false
+    });
+
+    return result;
+  } catch (error) {
+    await savePopupSessionState(pageKey, {
+      pageInfo,
+      status: `AI 映射失败：${error instanceof Error ? error.message : String(error)}`,
+      statusIsError: true
+    });
+    throw error;
+  }
+}
+
+async function analyzePageStructure(payload) {
+  const { scan } = payload;
+  if (!scan || !Array.isArray(scan.fields)) {
+    throw new Error("Missing scan result. Scan the current form first.");
+  }
+
+  const settings = await getSettings();
+  const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
+  const compactScan = {
+    url: scan.url,
+    hostname: scan.hostname,
+    title: scan.title,
+    siteAdapter: scan.siteAdapter || null,
+    fields: scan.fields.map(compactField)
+  };
+
+  const messages = buildPageStructureMessages(compactScan);
+  const rawContent = await callAi(apiConfig, messages, {
+    profile: { fields: [] },
+    profileCatalog: { fields: [] },
+    scan: compactScan
+  });
+  const parsed = parseJsonFromText(rawContent);
+  return normalizePageStructureAnalysis(parsed, compactScan.fields);
+}
+
+async function testApi(payload) {
+  const settings = await getSettings();
+  const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
+  const fakeProfile = buildProfileFieldCatalog({
+    basic: {},
+    education: [],
+    experiences: [],
+    campus: [],
+    family: {},
+    certificates: [],
+    awards: [],
+    customFields: { basic: [] },
+    other: {},
+    declarations: {}
+  });
+  const fakeScan = {
+    url: "https://example.test/job",
+    hostname: "example.test",
+    title: "Test Form",
+    fields: [
+      {
+        fieldId: "test_name",
+        type: "text",
+        label: "姓名",
+        placeholder: "",
+        required: true,
+        section: "基本信息",
+        nearbyText: "基本信息 姓名",
+        options: []
+      }
+    ]
+  };
+  const messages = buildMessages(fakeProfile, fakeScan);
+  const rawContent = await callAi(apiConfig, messages, {
+    profile: fakeProfile,
+    profileCatalog: fakeProfile,
+    scan: fakeScan
+  });
+  const parsed = parseJsonFromText(rawContent);
+  return {
+    parsed,
+    contentPreview: typeof rawContent === "string" ? rawContent.slice(0, 800) : String(rawContent).slice(0, 800)
+  };
+}
+
+async function listModels(payload) {
+  const settings = await getSettings();
+  const apiConfig = { ...settings.apiConfig, ...(payload.apiConfig || {}) };
+  const url = resolveModelListUrl(apiConfig);
+  if (!url) {
+    throw new Error(apiConfig.mode === "custom" ? "Custom API URL is required." : "API base URL is required.");
+  }
+
+  const headers = buildRequestHeaders({
+    apiConfig,
+    headerJson: apiConfig.mode === "custom" ? apiConfig.customHeadersJson : apiConfig.extraHeadersJson,
+    includeContentType: false
+  });
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Model list request failed ${response.status}: ${text.slice(0, 500)}`);
+  }
+
+  const data = safeJsonParse(text);
+  const source = extractModelListSource(data);
+  const models = normalizeModelList(source);
+
+  return {
+    url,
+    models
+  };
+}
+
+function compactField(field) {
+  return {
+    fieldId: field.fieldId,
+    type: field.type,
+    label: sanitizePromptText(field.label, 220),
+    placeholder: sanitizePromptText(field.placeholder, 160),
+    name: sanitizeAttributeText(field.name),
+    id: sanitizeAttributeText(field.id),
+    required: field.required,
+    disabled: field.disabled,
+    readOnly: field.readOnly,
+    canFill: field.canFill,
+    section: sanitizePromptText(field.section, 220),
+    nearbyText: sanitizePromptText(field.nearbyText, 420),
+    cssPath: sanitizeAttributeText(field.cssPath),
+    siteAdapterId: sanitizeAttributeText(field.siteAdapterId),
+    siteAdapterName: sanitizePromptText(field.siteAdapterName, 120),
+    hasCurrentValue: Boolean(field.hasCurrentValue),
+    options: Array.isArray(field.options) ? field.options.slice(0, 50).map(compactOption) : []
+  };
+}
+
+function compactOption(option) {
+  return {
+    value: sanitizePromptText(option?.value, 120),
+    label: sanitizePromptText(option?.label, 120)
+  };
+}
+
+function normalizeProvidedProfileCatalog(profileCatalog) {
+  if (!isPlainObject(profileCatalog) || !Array.isArray(profileCatalog.fields)) {
+    return null;
+  }
+
+  const fields = profileCatalog.fields
+    .map((field) => ({
+      path: sanitizeAttributeText(field?.path || ""),
+      label: sanitizePromptText(field?.label || "", 180),
+      aliases: Array.isArray(field?.aliases)
+        ? field.aliases.map((alias) => sanitizePromptText(alias, 120)).filter(Boolean).slice(0, 12)
+        : []
+    }))
+    .filter((field) => field.path && field.label)
+    .slice(0, 300);
+
+  const sections = Array.isArray(profileCatalog.sections)
+    ? profileCatalog.sections
+        .map((section) => {
+          const sectionFields = Array.isArray(section?.fields)
+            ? section.fields
+                .map((field) => fields.find((item) => item.path === sanitizeAttributeText(field?.path || "")))
+                .filter(Boolean)
+            : [];
+
+          return {
+            key: sanitizeAttributeText(section?.key || ""),
+            title: sanitizePromptText(section?.title || "", 120),
+            fields: sectionFields
+          };
+        })
+        .filter((section) => section.title && section.fields.length > 0)
+    : [];
+
+  return {
+    sections,
+    fields
+  };
+}
+
+function sanitizeAttributeText(value) {
+  return sanitizePromptText(value, 120);
+}
+
+function sanitizePromptText(value, maxLength = 220) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
+  return redactPersonalValues(text, maxLength);
+}
+
+function isPlainObject(value) {
+  return Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function redactPersonalValues(text, maxLength = 220) {
+  if (!text) {
+    return "";
+  }
+
+  const labelPatterns = [
+    /((?:姓名|手机号码|手机号|联系电话|电话|电子邮箱|邮箱|邮件|证件号码|身份证号|出生日期|出生时间|毕业院校|专业|学历|学位|工作单位|实习\/实践单位|组织名称|职务|岗位|学校|籍贯|户口|居住地|地址|联系人|证书号|学历证书号|奖惩名称|奖惩单位|奖惩原因|自我评价|招聘信息来源|备注|高考所在地|高考分数|身高|体重|期望年收入|分数)(?:[^:：]{0,8})[：:]\s*)([^|；;，,\n]+)/g,
+    /((?:是否[^:：\n]{0,40}[：:]\s*))([^\n]+)/g
+  ];
+
+  let redacted = text;
+  for (const pattern of labelPatterns) {
+    redacted = redacted.replace(pattern, (match, prefix) => {
+      return `${prefix}【已隐藏】`;
+    });
+  }
+
+  redacted = redacted.replace(/\b(?:\d{11}|\d{15,18}[Xx]?)\b/g, "【已隐藏】");
+  redacted = redacted.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "【已隐藏】");
+  redacted = redacted.replace(/\b\d{4,}\b/g, (match) => (match.length >= 6 ? "【已隐藏】" : match));
+
+  return redacted.length > maxLength ? `${redacted.slice(0, maxLength)}...` : redacted;
+}
+
+function buildProfileFieldCatalog(profile) {
+  const source = isPlainObject(profile) ? profile : {};
+  const catalog = [];
+
+  addSimpleProfileFields(catalog, "basic", BASIC_FIELD_DEFS);
+  addRepeatedProfileFields(catalog, "education", "教育经历", EDUCATION_FIELD_DEFS, Math.max(1, Array.isArray(source.education) ? source.education.length : 0));
+  addRepeatedProfileFields(catalog, "experiences", "实习经历", EXPERIENCE_FIELD_DEFS, Math.max(1, Array.isArray(source.experiences) ? source.experiences.length : 0));
+  addRepeatedProfileFields(catalog, "campus", "学生社团经历", CAMPUS_FIELD_DEFS, Math.max(1, Array.isArray(source.campus) ? source.campus.length : 0));
+  addFamilyProfileFields(catalog, "family.father", "父亲", FAMILY_FIELD_DEFS);
+  addFamilyProfileFields(catalog, "family.mother", "母亲", FAMILY_FIELD_DEFS);
+  addRepeatedProfileFields(catalog, "certificates", "证书信息", CERTIFICATE_FIELD_DEFS, Math.max(1, Array.isArray(source.certificates) ? source.certificates.length : 0));
+  addRepeatedProfileFields(catalog, "awards", "奖惩信息", AWARD_FIELD_DEFS, Math.max(1, Array.isArray(source.awards) ? source.awards.length : 0));
+  addSimpleProfileFields(catalog, "other", OTHER_FIELD_DEFS);
+  addSimpleProfileFields(catalog, "declarations", DECLARATION_FIELD_DEFS);
+  addCustomProfileFields(catalog, source.customFields);
+
+  return {
+    sections: [
+      {
+        key: "basic",
+        title: "基本信息",
+        fields: catalog.filter((item) => item.path.startsWith("basic."))
+      },
+      {
+        key: "education",
+        title: "教育经历",
+        fields: catalog.filter((item) => item.path.startsWith("education["))
+      },
+      {
+        key: "experiences",
+        title: "实习经历 / 项目实践",
+        fields: catalog.filter((item) => item.path.startsWith("experiences["))
+      },
+      {
+        key: "campus",
+        title: "学生社团经历",
+        fields: catalog.filter((item) => item.path.startsWith("campus["))
+      },
+      {
+        key: "family",
+        title: "家庭及社会关系",
+        fields: catalog.filter((item) => item.path.startsWith("family."))
+      },
+      {
+        key: "certificates",
+        title: "证书信息",
+        fields: catalog.filter((item) => item.path.startsWith("certificates["))
+      },
+      {
+        key: "awards",
+        title: "奖惩信息",
+        fields: catalog.filter((item) => item.path.startsWith("awards["))
+      },
+      {
+        key: "other",
+        title: "其他信息",
+        fields: catalog.filter((item) => item.path.startsWith("other."))
+      },
+      {
+        key: "declarations",
+        title: "有关声明",
+        fields: catalog.filter((item) => item.path.startsWith("declarations."))
+      },
+      {
+        key: "customFields",
+        title: "自定义字段",
+        fields: catalog.filter((item) => item.path.startsWith("customFields."))
+      }
+    ],
+    fields: catalog
+  };
+}
+
+function addSimpleProfileFields(catalog, prefix, defs) {
+  for (const [key, label, aliases] of defs) {
+    catalog.push({
+      path: `${prefix}.${key}`,
+      label,
+      aliases: Array.isArray(aliases) ? aliases : [aliases]
+    });
+  }
+}
+
+function addRepeatedProfileFields(catalog, prefix, sectionLabel, defs, count) {
+  const itemCount = Math.max(1, Math.min(Number(count) || 0, 5));
+  for (let index = 0; index < itemCount; index += 1) {
+    for (const [key, label, aliases] of defs) {
+      catalog.push({
+        path: `${prefix}[${index}].${key}`,
+        label: `${sectionLabel} ${index + 1} ${label}`,
+        aliases: Array.isArray(aliases) ? aliases : [aliases]
+      });
+    }
+  }
+}
+
+function addFamilyProfileFields(catalog, prefix, roleLabel, defs) {
+  for (const [key, label, aliases] of defs) {
+    catalog.push({
+      path: `${prefix}.${key}`,
+      label: `${roleLabel}${label}`,
+      aliases: Array.isArray(aliases) ? aliases : [aliases]
+    });
+  }
+}
+
+function addCustomProfileFields(catalog, customFields) {
+  const basicFields = Array.isArray(customFields?.basic) ? customFields.basic : [];
+  for (let index = 0; index < basicFields.length; index += 1) {
+    const item = basicFields[index] || {};
+    const label = sanitizePromptText(item.label || item.key || `自定义字段${index + 1}`, 120);
+    const key = sanitizeAttributeText(item.key || "");
+    catalog.push({
+      path: `customFields.basic[${index}].value`,
+      label,
+      aliases: [label, key].filter(Boolean)
+    });
+  }
+}
+
+function profileToMarkdown(profile) {
+  const source = isPlainObject(profile) ? profile : {};
+  const lines = [
+    "# 简历资料小抄",
+    "",
+    "> 本文件只保存在本机。按 `## 大类` 和 `- 字段：值` 追加内容，侧边栏会自动按大类展示。",
+    ""
+  ];
+
+  addMarkdownSimpleSection(lines, "基本信息", source.basic || {}, BASIC_FIELD_DEFS);
+  addMarkdownRepeatedSection(lines, "教育经历", source.education, EDUCATION_FIELD_DEFS, "教育经历");
+  const splitExperience = splitMarkdownExperienceItems(source.experiences);
+  addMarkdownRepeatedSection(lines, "实习经历", splitExperience.internships, EXPERIENCE_FIELD_DEFS, "实习经历");
+  addMarkdownRepeatedSection(lines, "项目经历", splitExperience.projects, EXPERIENCE_FIELD_DEFS, "项目经历");
+  addMarkdownRepeatedSection(lines, "社团工作", source.campus, CAMPUS_FIELD_DEFS, "社团工作");
+  addMarkdownFamilySection(lines, source.family || {});
+  addMarkdownRepeatedSection(lines, "证书技能", source.certificates, CERTIFICATE_FIELD_DEFS, "证书");
+  addMarkdownRepeatedSection(lines, "奖惩情况", source.awards, AWARD_FIELD_DEFS, "奖惩");
+  addMarkdownSimpleSection(lines, "其他信息", source.other || {}, OTHER_FIELD_DEFS);
+  addMarkdownSimpleSection(lines, "有关声明", source.declarations || {}, DECLARATION_FIELD_DEFS);
+  addMarkdownCustomFields(lines, source.customFields);
+
+  return `${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+}
+
+function addMarkdownSimpleSection(lines, title, data, defs) {
+  lines.push(`## ${title}`);
+  for (const [key, label] of defs) {
+    lines.push(`- ${label}：${formatMarkdownValue(data?.[key])}`);
+  }
+  lines.push("");
+}
+
+function addMarkdownRepeatedSection(lines, title, items, defs, itemLabel) {
+  lines.push(`## ${title}`);
+  const list = Array.isArray(items) && items.length > 0 ? items : [{}];
+  list.forEach((item, index) => {
+    if (list.length > 1 || !isEmptyMarkdownObject(item)) {
+      lines.push(`### ${itemLabel} ${index + 1}`);
+    }
+    for (const [key, label] of defs) {
+      lines.push(`- ${label}：${formatMarkdownValue(item?.[key])}`);
+    }
+    lines.push("");
+  });
+}
+
+function addMarkdownFamilySection(lines, family) {
+  lines.push("## 家庭信息");
+  for (const [key, title] of [
+    ["father", "父亲"],
+    ["mother", "母亲"]
+  ]) {
+    lines.push(`### ${title}`);
+    const member = family?.[key] || {};
+    for (const [fieldKey, label] of FAMILY_FIELD_DEFS) {
+      lines.push(`- ${label}：${formatMarkdownValue(member[fieldKey])}`);
+    }
+    lines.push("");
+  }
+}
+
+function splitMarkdownExperienceItems(items) {
+  const list = Array.isArray(items) ? items : [];
+  const projects = [];
+  const internships = [];
+
+  for (const item of list) {
+    const organization = String(item?.organization || "");
+    const role = String(item?.role || "");
+    const looksLikeProject = /项目|作品|系统|平台|Agent|RAG|后台|助手/i.test(`${organization} ${role}`);
+    if (looksLikeProject && !/公司|集团|银行|证券|科技|有限|中心|研究院/.test(organization)) {
+      projects.push(item);
+    } else {
+      internships.push(item);
+    }
+  }
+
+  return { internships, projects };
+}
+
+function addMarkdownCustomFields(lines, customFields) {
+  const basicFields = Array.isArray(customFields?.basic) ? customFields.basic : [];
+  if (basicFields.length === 0) {
+    return;
+  }
+
+  lines.push("## 自定义资料");
+  for (const item of basicFields) {
+    const label = item?.label || item?.key || "自定义字段";
+    lines.push(`- ${label}：${formatMarkdownValue(item?.value)}`);
+    if (item?.note) {
+      lines.push(`  备注：${formatMarkdownValue(item.note)}`);
+    }
+  }
+  lines.push("");
+}
+
+function formatMarkdownValue(value) {
+  if (value == null) {
+    return "";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return String(value).replace(/\s*\n+\s*/g, " ").trim();
+}
+
+function isEmptyMarkdownObject(value) {
+  if (!isPlainObject(value)) {
+    return true;
+  }
+
+  return Object.values(value).every((child) => child == null || String(child).trim() === "");
+}
+
+function buildMessages(profileCatalog, scan) {
+  const systemPrompt = [
+    "You are a form-field mapping engine for job application forms.",
+    "Your only task is to map detected web form fields to local resume profile source paths.",
+    "Return strict JSON only. Do not include markdown or explanations outside JSON.",
+    "Privacy rule: you are not given the user's actual resume values, and you must not ask for, infer, copy, or output personal values.",
+    "The profile field catalog contains sourcePath names and field labels only. All real values are withheld and will be resolved locally in the browser.",
+    "Do not map file upload fields. Do not decide to submit the form.",
+    "Prefer sourcePath. Use value only for non-personal constants when no sourcePath applies.",
+    "If options are provided for a select/combobox, map to the relevant sourcePath; local code will match the user's value to the page option."
+  ].join("\n");
+
+  const userPrompt = [
+    "Map fields from the current job application page to the local resume profile field catalog.",
+    "",
+    "Return JSON with this schema:",
+    JSON.stringify(
+      {
+        mappings: [
+          {
+            fieldId: "field id from fields list",
+            sourcePath: "path.in.profile, for example basic.name or education[0].school",
+            value: "optional non-personal literal only when sourcePath is not enough",
+            confidence: 0.95,
+            reason: "short reason"
+          }
+        ],
+        notes: ["optional warnings"]
+      },
+      null,
+      2
+    ),
+    "",
+    "Rules:",
+    "- Use only fieldId values that exist in fields.",
+    "- Set confidence from 0 to 1.",
+    "- Required fields deserve careful mapping, but uncertainty must lower confidence.",
+    "- For repeated sections like family father/mother or education entries, use section and nearbyText to select the right profile path.",
+    "- For Chinese recruitment forms, common mappings include 姓名 -> basic.name, 手机号码 -> basic.phone, 电子邮箱 -> basic.email, 毕业院校 -> education[0].school, 证书名称 -> certificates[0].name, 特长爱好类别 -> other.hobbyCategory, 特长爱好具体内容 -> other.hobbyDetail.",
+    "- For user-defined fields, inspect customFields.* items by label and key. If a custom field matches, use sourcePath like customFields.basic[0].value.",
+    "- For declarations asking yes/no questions, use declarations.* only if the question meaning clearly matches.",
+    "- Do not output copied page values, existing field values, names, phone numbers, email addresses, ID numbers, schools, employers, addresses, or experience descriptions.",
+    "",
+    "Local profile field catalog. Values are intentionally omitted:",
+    JSON.stringify(profileCatalog, null, 2),
+    "",
+    "Detected page fields JSON. Existing field values are intentionally omitted/redacted:",
+    JSON.stringify(scan, null, 2)
+  ].join("\n");
+
+  return [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt }
+  ];
+}
+
+function buildPageStructureMessages(scan) {
+  const systemPrompt = [
+    "You are a page-structure analyzer for job application forms.",
+    "Your task is to normalize noisy detected web form metadata into readable form-field hints.",
+    "Return strict JSON only. Do not include markdown or explanations outside JSON.",
+    "Privacy rule: the page may already contain user-entered values in nearby text, so never copy, infer, or output personal values.",
+    "Only output structural labels, section names, control kind hints, and short non-sensitive notes.",
+    "Do not decide to submit the form and do not map to a resume profile."
+  ].join("\n");
+
+  const userPrompt = [
+    "Analyze the current job application page fields.",
+    "",
+    "Return JSON with this schema:",
+    JSON.stringify(
+      {
+        siteType: "generic | zhiye | hotjob | ats | ant-design | element-ui | custom",
+        confidence: 0.8,
+        fieldHints: [
+          {
+            fieldId: "field id from fields list",
+            label: "normalized visible label, no personal value",
+            section: "normalized section name",
+            controlKind: "text | textarea | select | search-select | radio | checkbox | date | file | unknown",
+            confidence: 0.9,
+            note: "short structural note"
+          }
+        ],
+        notes: ["optional warnings"]
+      },
+      null,
+      2
+    ),
+    "",
+    "Rules:",
+    "- Use only fieldId values that exist in fields.",
+    "- If nearbyText contains a label and value, output only the label.",
+    "- Prefer Chinese field labels when the page is Chinese.",
+    "- For repeated sections, keep section names such as 基本信息、教育经历、实习经历、项目经历、家庭信息、附加问题.",
+    "- If a field is a custom select/search input, set controlKind to search-select or select.",
+    "- Do not output names, phone numbers, email addresses, ID numbers, schools, employers, addresses, dates of birth, or experience descriptions.",
+    "",
+    "Detected page fields JSON. Existing field values are omitted/redacted:",
+    JSON.stringify(scan, null, 2)
+  ].join("\n");
+
+  return [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt }
+  ];
+}
+
+async function callAi(apiConfig, messages, context) {
+  if (apiConfig.mode === "custom") {
+    return callCustomApi(apiConfig, messages, context);
+  }
+  return callOpenAiCompatible(apiConfig, messages);
+}
+
+async function callOpenAiCompatible(apiConfig, messages) {
+  if (!apiConfig.baseUrl) {
+    throw new Error("API base URL is required.");
+  }
+  if (!apiConfig.model) {
+    throw new Error("Model name is required.");
+  }
+
+  const url = joinUrl(apiConfig.baseUrl, apiConfig.endpointPath || "/chat/completions");
+  const headers = buildRequestHeaders({ apiConfig, headerJson: apiConfig.extraHeadersJson });
+
+  const body = {
+    model: apiConfig.model,
+    messages,
+    temperature: 0
+  };
+
+  if (apiConfig.useJsonResponseFormat) {
+    body.response_format = { type: "json_object" };
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body)
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`API request failed ${response.status}: ${text.slice(0, 500)}`);
+  }
+
+  const data = safeJsonParse(text);
+  if (!data) {
+    return text;
+  }
+
+  const content = data?.choices?.[0]?.message?.content;
+  if (Array.isArray(content)) {
+    return content.map((item) => item.text || item.content || "").join("");
+  }
+  if (typeof content === "string") {
+    return content;
+  }
+
+  return JSON.stringify(data);
+}
+
+async function callCustomApi(apiConfig, messages, context) {
+  if (!apiConfig.customUrl) {
+    throw new Error("Custom API URL is required.");
+  }
+
+  const headers = buildRequestHeaders({ apiConfig, headerJson: apiConfig.customHeadersJson });
+
+  const body = renderTemplate(apiConfig.customBodyTemplate || DEFAULT_API_CONFIG.customBodyTemplate, {
+    model: apiConfig.model || "",
+    messages,
+    systemPrompt: messages.find((message) => message.role === "system")?.content || "",
+    userPrompt: messages.find((message) => message.role === "user")?.content || "",
+    profile: context.profile,
+    scan: context.scan
+  });
+
+  const response = await fetch(apiConfig.customUrl, {
+    method: apiConfig.customMethod || "POST",
+    headers,
+    body
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Custom API request failed ${response.status}: ${text.slice(0, 500)}`);
+  }
+
+  const data = safeJsonParse(text);
+  if (!data) {
+    return text;
+  }
+
+  const content = apiConfig.customResponsePath ? getByPath(data, apiConfig.customResponsePath) : data;
+  if (typeof content === "string") {
+    return content;
+  }
+  return JSON.stringify(content);
+}
+
+function buildRequestHeaders({ apiConfig, headerJson, includeContentType = true }) {
+  const headers = parseJsonObject(headerJson, "request headers");
+  if (includeContentType && !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")) {
+    headers["content-type"] = "application/json";
+  }
+  if (apiConfig.apiKey && !Object.keys(headers).some((key) => key.toLowerCase() === "authorization")) {
+    headers.authorization = `Bearer ${apiConfig.apiKey}`;
+  }
+  return headers;
+}
+
+function resolveModelListUrl(apiConfig) {
+  if (apiConfig.mode === "openai-compatible") {
+    return apiConfig.baseUrl ? joinUrl(apiConfig.baseUrl, "/models") : "";
+  }
+
+  const derived = deriveModelListUrl(apiConfig.customUrl || "");
+  return derived;
+}
+
+function deriveModelListUrl(sourceUrl) {
+  if (!sourceUrl) {
+    return "";
+  }
+
+  try {
+    const url = new URL(sourceUrl);
+    if (url.pathname.endsWith("/chat/completions")) {
+      url.pathname = url.pathname.replace(/\/chat\/completions$/, "/models");
+      return url.toString();
+    }
+    if (url.pathname.endsWith("/completions")) {
+      url.pathname = url.pathname.replace(/\/completions$/, "/models");
+      return url.toString();
+    }
+    if (url.pathname.endsWith("/responses")) {
+      url.pathname = url.pathname.replace(/\/responses$/, "/models");
+      return url.toString();
+    }
+    if (!url.pathname || url.pathname === "/") {
+      url.pathname = "/models";
+      return url.toString();
+    }
+    url.pathname = "/models";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function extractModelListSource(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+  if (Array.isArray(data?.models)) {
+    return data.models;
+  }
+  if (Array.isArray(data?.items)) {
+    return data.items;
+  }
+  if (Array.isArray(data?.result)) {
+    return data.result;
+  }
+  if (Array.isArray(data?.choices)) {
+    return data.choices;
+  }
+  if (data && typeof data === "object") {
+    for (const key of ["data", "models", "items", "result", "list"]) {
+      if (Array.isArray(data[key])) {
+        return data[key];
+      }
+    }
+  }
+
+  throw new Error("Could not find a model array in the response.");
+}
+
+function normalizeModelList(source) {
+  const items = Array.isArray(source) ? source : [];
+  return items
+    .map((item) => normalizeModelItem(item))
+    .filter(Boolean);
+}
+
+function normalizeModelItem(item) {
+  if (typeof item === "string") {
+    const id = item.trim();
+    return id ? { id, name: id } : null;
+  }
+
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const id = String(item.id || item.model || item.name || item.slug || item.value || "").trim();
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    name: String(item.display_name || item.name || item.id || id).trim() || id
+  };
+}
+
+function joinUrl(baseUrl, path) {
+  const normalizedBase = String(baseUrl).replace(/\/+$/, "");
+  const normalizedPath = String(path || "").replace(/^\/?/, "/");
+  return `${normalizedBase}${normalizedPath}`;
+}
+
+function parseJsonObject(value, label) {
+  if (!value || !String(value).trim()) {
+    return {};
+  }
+
+  const parsed = JSON.parse(value);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${label} must be a JSON object.`);
+  }
+  return parsed;
+}
+
+function renderTemplate(template, values) {
+  const replacements = {
+    model: values.model,
+    modelJson: JSON.stringify(values.model),
+    messagesJson: JSON.stringify(values.messages),
+    systemPrompt: values.systemPrompt,
+    systemPromptJson: JSON.stringify(values.systemPrompt),
+    userPrompt: values.userPrompt,
+    userPromptJson: JSON.stringify(values.userPrompt),
+    prompt: values.userPrompt,
+    promptJson: JSON.stringify(values.userPrompt),
+    profileJson: JSON.stringify(values.profile),
+    profileCatalogJson: JSON.stringify(values.profileCatalog || values.profile),
+    fieldsJson: JSON.stringify(values.scan.fields),
+    scanJson: JSON.stringify(values.scan)
+  };
+
+  return String(template).replace(/\{\{(\w+)\}\}/g, (_match, key) => {
+    if (!Object.prototype.hasOwnProperty.call(replacements, key)) {
+      throw new Error(`Unknown custom API template variable: ${key}`);
+    }
+    return replacements[key];
+  });
+}
+
+function safeJsonParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function parseJsonFromText(text) {
+  if (typeof text !== "string") {
+    return text;
+  }
+
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
+  const direct = safeJsonParse(cleaned);
+  if (direct) {
+    return direct;
+  }
+
+  const jsonCandidate = extractFirstJson(cleaned);
+  const parsed = jsonCandidate ? safeJsonParse(jsonCandidate) : null;
+  if (!parsed) {
+    throw new Error(`AI response is not valid JSON: ${cleaned.slice(0, 500)}`);
+  }
+
+  return parsed;
+}
+
+function normalizePageStructureAnalysis(parsed, fields) {
+  const validFieldIds = new Set(fields.map((field) => field.fieldId));
+  const fieldHintsSource = Array.isArray(parsed?.fieldHints)
+    ? parsed.fieldHints
+    : Array.isArray(parsed?.fields)
+      ? parsed.fields
+      : [];
+
+  const fieldHints = fieldHintsSource
+    .filter((hint) => hint && validFieldIds.has(String(hint.fieldId || "")))
+    .map((hint) => ({
+      fieldId: String(hint.fieldId),
+      label: sanitizePromptText(hint.label || hint.normalizedLabel || "", 120),
+      section: sanitizePromptText(hint.section || hint.group || "", 120),
+      controlKind: sanitizeAttributeText(hint.controlKind || hint.type || "unknown"),
+      confidence: clampConfidence(hint.confidence),
+      note: sanitizePromptText(hint.note || hint.reason || "", 160)
+    }))
+    .filter((hint) => hint.label || hint.section || hint.controlKind !== "unknown");
+
+  return {
+    siteType: sanitizeAttributeText(parsed?.siteType || parsed?.type || "generic"),
+    confidence: clampConfidence(parsed?.confidence),
+    fieldHints,
+    notes: Array.isArray(parsed?.notes)
+      ? parsed.notes.map((note) => sanitizePromptText(note, 160)).filter(Boolean).slice(0, 8)
+      : [],
+    raw: parsed
+  };
+}
+
+function extractFirstJson(text) {
+  const start = text.search(/[\[{]/);
+  if (start < 0) {
+    return "";
+  }
+
+  const opener = text[start];
+  const closer = opener === "{" ? "}" : "]";
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === opener) {
+      depth += 1;
+    } else if (char === closer) {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, i + 1);
+      }
+    }
+  }
+
+  return "";
+}
+
+function normalizeAiMappings(parsed, fields) {
+  let mappings = [];
+
+  if (Array.isArray(parsed)) {
+    mappings = parsed;
+  } else if (Array.isArray(parsed?.mappings)) {
+    mappings = parsed.mappings;
+  } else if (parsed && typeof parsed === "object") {
+    mappings = Object.entries(parsed).map(([fieldId, value]) => ({
+      fieldId,
+      ...(value && typeof value === "object" ? value : { value })
+    }));
+  }
+
+  const validFieldIds = new Set(fields.map((field) => field.fieldId));
+  return mappings
+    .filter((mapping) => mapping && validFieldIds.has(mapping.fieldId))
+    .map((mapping) => {
+      const normalized = {
+        fieldId: String(mapping.fieldId),
+        sourcePath: mapping.sourcePath || mapping.source || mapping.path || "",
+        confidence: clampConfidence(mapping.confidence),
+        reason: String(mapping.reason || "")
+      };
+
+      if (
+        !normalized.sourcePath &&
+        Object.prototype.hasOwnProperty.call(mapping, "value") &&
+        mapping.value !== undefined
+      ) {
+        normalized.value = mapping.value;
+      }
+
+      return normalized;
+    });
+}
+
+function annotateMappingsWithCatalog(mappings, profileCatalog) {
+  const catalogFields = Array.isArray(profileCatalog?.fields) ? profileCatalog.fields : [];
+  const sections = Array.isArray(profileCatalog?.sections) ? profileCatalog.sections : [];
+  const fieldByPath = new Map(catalogFields.map((field) => [field.path, field]));
+  const sectionByPath = new Map();
+
+  for (const section of sections) {
+    const fields = Array.isArray(section.fields) ? section.fields : [];
+    for (const field of fields) {
+      sectionByPath.set(field.path, section.title || "");
+    }
+  }
+
+  return mappings.map((mapping) => {
+    const catalogField = fieldByPath.get(mapping.sourcePath);
+    if (!catalogField) {
+      return mapping;
+    }
+
+    return {
+      ...mapping,
+      sourceLabel: catalogField.label || "",
+      sourceSection: sectionByPath.get(mapping.sourcePath) || ""
+    };
+  });
+}
+
+function clampConfidence(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return 0.5;
+  }
+  return Math.max(0, Math.min(1, number));
+}
+
+function getByPath(source, path) {
+  const parts = String(path)
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  let current = source;
+  for (const part of parts) {
+    if (current == null) {
+      return undefined;
+    }
+    current = current[part];
+  }
+  return current;
+}

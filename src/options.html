@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>简历资料小抄 设置</title>
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">简历资料小抄</p>
+          <h1>维护本机 Markdown 小抄</h1>
+          <p class="hint">数据只保存在本机的 <code>chrome.storage.local</code>，不会走同步云端。AI 只分析页面结构和本地资料字段目录，不会读取你的简历值。侧边栏会显示本机 Markdown 资料，也可以先生成填充草稿，再把你勾选的项目写入当前网页。</p>
+        </div>
+      </header>
+
+      <section class="resume-workbench">
+        <aside class="resume-nav card">
+          <div class="side-title">资料目录</div>
+          <nav id="profileNav" class="resume-nav-list" aria-label="简历资料目录"></nav>
+        </aside>
+
+        <section class="card profile-card">
+          <div class="profile-card-head">
+            <div>
+              <h2>简历资料</h2>
+              <p class="hint">最终仍保存为 Markdown。这里按塔塔网申式栏目拆开填写，保存时会自动合成完整小抄。</p>
+            </div>
+          </div>
+          <textarea id="profileMarkdown" class="profile-markdown-source" spellcheck="false" hidden></textarea>
+          <div id="profileSectionEditor" class="profile-section-editor"></div>
+          <div id="profileEditor" hidden></div>
+          <div class="actions profile-actions">
+            <button id="saveProfile" type="button">保存资料</button>
+            <button id="exportProfile" class="secondary" type="button">导出 Markdown</button>
+            <button id="importProfile" class="secondary" type="button">导入 Markdown / JSON</button>
+            <button id="resetProfile" class="ghost" type="button">恢复模板</button>
+            <button id="clearLocalData" class="ghost danger" type="button">清空本地数据</button>
+          </div>
+          <input id="profileFileInput" type="file" accept="text/markdown,text/plain,application/json,.md,.markdown,.txt,.json" hidden />
+        </section>
+
+        <aside class="resume-tips card">
+          <div class="side-title">填写提示</div>
+          <div id="profileTips" class="profile-tips"></div>
+        </aside>
+      </section>
+
+      <section class="grid settings-grid">
+        <form id="settingsForm" class="card">
+          <h2>API 设置（可选，用于 AI 页面分析）</h2>
+
+          <label>
+            API 模式
+            <select id="apiMode">
+              <option value="openai-compatible">OpenAI 兼容 Chat Completions</option>
+              <option value="custom">自定义请求模板</option>
+            </select>
+          </label>
+
+          <label>
+            API Key
+            <input id="apiKey" type="password" autocomplete="off" placeholder="sk-... 或其他供应商密钥" />
+          </label>
+
+          <label>
+            模型名
+            <input id="model" type="text" list="modelOptions" placeholder="例如 your-custom-model" />
+            <datalist id="modelOptions"></datalist>
+            <span class="field-help">可以手动输入任意模型名；刷新模型列表只会提供候选，不会限制这里的输入。</span>
+          </label>
+
+          <label>
+            模型候选（可选）
+            <select id="modelPreset">
+              <option value="">手动输入 / 不使用候选</option>
+            </select>
+          </label>
+
+          <div class="mode-block" data-mode="openai-compatible">
+            <label>
+              Base URL
+              <input id="baseUrl" type="url" placeholder="https://api.example.com/v1" />
+            </label>
+
+            <label>
+              Endpoint Path
+              <input id="endpointPath" type="text" placeholder="/chat/completions" />
+            </label>
+
+            <label class="checkline">
+              <input id="useJsonResponseFormat" type="checkbox" />
+              <span>请求中加入 response_format: {"type":"json_object"}</span>
+            </label>
+
+            <label>
+              额外 Headers JSON
+              <textarea id="extraHeadersJson" rows="4" spellcheck="false" placeholder='{"x-api-source":"job-autofill"}'></textarea>
+            </label>
+          </div>
+
+          <div class="mode-block" data-mode="custom">
+            <label>
+              Custom API URL
+              <input id="customUrl" type="url" placeholder="https://api.example.com/map-fields" />
+            </label>
+
+            <label>
+              Method
+              <select id="customMethod">
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+              </select>
+            </label>
+
+            <label>
+              Custom Headers JSON
+              <textarea id="customHeadersJson" rows="4" spellcheck="false" placeholder='{"authorization":"Bearer xxx"}'></textarea>
+            </label>
+
+            <label>
+              Body Template
+              <textarea id="customBodyTemplate" rows="10" spellcheck="false"></textarea>
+            </label>
+
+            <label>
+              Response Path
+              <input id="customResponsePath" type="text" placeholder="choices.0.message.content" />
+            </label>
+
+            <p class="hint">
+              可用变量：{{modelJson}}、{{messagesJson}}、{{systemPromptJson}}、{{userPromptJson}}、{{profileJson}}、{{profileCatalogJson}}、{{fieldsJson}}、{{scanJson}}。其中 profile* 变量都是本地字段目录，不含具体值。
+            </p>
+          </div>
+
+          <div class="actions">
+            <button id="saveBtn" type="submit">保存 API 设置</button>
+            <button id="refreshModels" class="secondary" type="button">刷新模型列表</button>
+            <button id="testConnection" class="secondary" type="button">测试连接</button>
+          </div>
+
+          <p id="apiFeedback" class="api-feedback" aria-live="polite"></p>
+          <div id="apiPreviewBox" class="api-preview-box" hidden>
+            <div class="api-preview-title">响应预览</div>
+            <pre id="apiPreview" class="api-preview"></pre>
+          </div>
+        </form>
+
+      </section>
+
+      <section class="card status-card">
+        <h2>状态</h2>
+        <pre id="status">正在加载...</pre>
+      </section>
+    </main>
+
+    <script src="./options.js"></script>
+  </body>
+</html>
