@@ -72,6 +72,20 @@ p,
   font-size: 12px;
 }
 
+.repo-link {
+  display: inline-block;
+  max-width: 250px;
+  margin-top: 6px;
+  color: var(--primary);
+  font-size: 12px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.repo-link:hover {
+  text-decoration: underline;
+}
+
 .panel {
   margin-bottom: 12px;
   padding: 12px;
