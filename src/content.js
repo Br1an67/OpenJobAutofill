@@ -1,5 +1,5 @@
 (() => {
-  const SCRIPT_VERSION = "0.8.2-direct-fill";
+  const SCRIPT_VERSION = "0.8.4-ai-state";
 
   if (window.__OJAF_AUTOFILL_VERSION__ === SCRIPT_VERSION) {
     return;
@@ -32,8 +32,10 @@
   let autofillInProgress = false;
   let autofillProgress = { active: false, stage: "", percent: 0, detail: "" };
   let autofillSummary = null;
+  let lastAutofillDebug = null;
   let autofillRunId = 0;
   let autofillProgressTimer = null;
+  let autofillAiState = createAutofillAiState();
 
   const CONTROL_SELECTOR = [
     'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"])',
@@ -113,6 +115,8 @@
     "教育经历",
     "实习经历",
     "工作经历",
+    "绩效考核",
+    "专业资格",
     "项目经历",
     "社团工作",
     "学生工作",
@@ -145,6 +149,8 @@
     证件号码类型: ["证件类型", "身份证件类型", "证件类别"],
     证件号码: ["身份证号", "身份证号码", "证件号", "身份证", "居民身份证号码"],
     婚姻状况: ["婚姻状态"],
+    最高全日制学历: ["最高学历", "学历", "学历层次"],
+    最高学历: ["最高全日制学历", "学历", "学历层次"],
     培养方式: ["教育类型", "学习形式", "办学形式", "统招统分"],
     教育类型: ["培养方式", "学习形式", "办学形式", "是否全日制"],
     学习形式: ["培养方式", "教育类型"],
@@ -190,9 +196,12 @@
     意向岗位: ["目标岗位", "应聘岗位", "申请岗位", "投递岗位"],
     预计入职时间: ["可入职时间", "到岗时间"],
     当前薪资: ["目前薪资", "现薪资"],
+    当前年收入: ["目前年收入", "现年收入", "当前年薪", "目前年薪"],
     期望工作城市: ["意向工作城市", "期望城市", "意向城市", "期望工作地点"],
     期望薪资: ["期望年薪", "期望月薪", "期望年收入", "期待薪资"],
+    期望年收入: ["期望薪资", "期望年薪", "期待年收入"],
     面试城市: ["可面试城市"],
+    简历来源: ["招聘信息来源", "信息来源"],
     即将获得最高学历: ["最高学历", "学历"],
     最高学历院校: ["最高学历学校", "毕业院校", "学校名称", "院校名称"],
     最高学历院系: ["最高学历学院", "学院名称", "院系", "院系名称"],
@@ -218,7 +227,10 @@
     毕业论文: ["论文题目", "毕业论文题目"],
     成绩: ["学习成绩", "GPA分数", "平均成绩"],
     学历证书编号: ["学历证书号", "毕业证书编号"],
+    学历证书号: ["学历证书编号", "毕业证书编号"],
     学位证书编号: ["学位证书号"],
+    毕业状态: ["毕（结、肆）业", "毕结肆业"],
+    "毕（结、肆）业": ["毕业状态", "毕结肆业"],
     辅导员姓名: ["辅导员"],
     辅导员联系方式: ["辅导员电话", "辅导员手机号"],
     是否为海外教育经历: ["是否海外教育经历", "是否海外学历", "海外教育经历"],
@@ -260,18 +272,24 @@
     组织名称: ["社团名称", "学生组织", "部门名称"],
     职务描述: ["职责", "活动描述", "工作职责或活动描述"],
     奖惩时间: ["获奖时间", "奖励时间"],
+    奖惩解除时间: ["解除时间", "处分解除时间"],
     奖惩名称: ["奖励名称", "奖项名称", "荣誉名称"],
     颁奖单位: ["授奖单位", "奖惩单位", "颁发单位"],
+    奖惩单位: ["颁奖单位", "授奖单位", "授予单位"],
     奖励等级: ["奖项等级", "奖励级别", "奖惩层级"],
+    奖惩层级: ["奖励等级", "奖项等级", "奖励级别"],
     奖惩描述: ["获奖描述", "奖励描述", "奖惩原因"],
+    奖惩原因: ["奖惩描述", "获奖描述", "奖励描述"],
     证书: ["证书名称", "资格证书", "技能证书"],
     证书名称技能名称: ["证书名称（技能名称）", "证书名称", "技能名称"],
+    证书类别: ["证书类型", "资格证书类别"],
     外语种类: ["外语语种", "语言类型", "语种"],
     获得时间: ["获取日期", "取得时间", "证书取得时间", "获得日期"],
     证书获得时间: ["证书取得时间", "获得时间", "取得时间"],
     其他类请填写: ["其他证书", "其他证书名称"],
     证书颁发单位: ["发证机构", "颁发单位"],
     授予单位: ["颁发单位", "证书颁发单位", "发证机构"],
+    发证单位: ["授予单位", "颁发单位", "证书颁发单位", "发证机构"],
     证书编号: ["证书号码"],
     证书说明: ["证书描述", "证书备注"],
     获取日期: ["取得时间", "证书取得时间", "获得日期"],
@@ -303,6 +321,12 @@
     工作单位: ["家属工作单位", "亲属工作单位"],
     部门及职位: ["家属职务", "亲属职务", "职务"],
     联系电话: ["家属联系电话", "亲属联系电话"],
+    有无工作经历: ["是否有工作经历", "工作经历"],
+    是否退休: ["有无退休", "退休情况"],
+    绩效考核等级: ["考核等级", "年度绩效考核等级"],
+    年度绩效排名: ["绩效排名", "考核排名", "排名"],
+    绩效证明人: ["考核证明人", "证明人"],
+    绩效证明人联系方式: ["证明人联系方式", "联系方式", "联系电话"],
     兴趣爱好: ["爱好", "特长爱好具体内容"],
     特长: ["个人特长", "技能特长"],
     社会校园活动: ["社会/校园活动", "校园活动", "社会活动"],
@@ -310,7 +334,12 @@
     工作地点是否服从调剂: ["是否接受调剂", "是否服从调剂", "接受调剂"],
     是否同意部门岗位调配: ["是否同意部门/岗位调配", "部门岗位调配", "岗位调配"],
     首选工作地点: ["第一工作地点", "意向工作地点"],
-    首选工作地点是否接受调剂: ["工作地点是否接受调剂", "地点调剂"]
+    首选工作地点是否接受调剂: ["工作地点是否接受调剂", "地点调剂"],
+    是否存在亲属在应聘单位工作: ["亲属在应聘单位工作", "是否存在亲属在本行工作情况", "亲属在本行工作", "亲属在我行工作"],
+    是否患有影响工作的疾病: ["是否患有传染病高血压心脏病糖尿病肾炎精神病等影响工作的疾病", "是否患有重大疾病"],
+    是否在第三方企业任兼职或持有企业股权: ["是否在第三方企业任兼职或持有企业股权", "任兼职或持有企业股权"],
+    是否存在曾被用人单位辞退情况: ["曾被用人单位辞退情况", "是否曾被用人单位辞退"],
+    是否享有境外长期或永久居留权: ["是否享有境外国家或地区长期或永久居留权", "境外长期或永久居留权"]
   };
 
   function normalizeText(value, maxLength = 260) {
@@ -522,6 +551,261 @@
     return rest ? `${minutes} 分 ${rest} 秒` : `${minutes} 分钟`;
   }
 
+  function createAutofillAiState() {
+    return {
+      status: "idle",
+      attempted: false,
+      used: false,
+      fallback: false,
+      currentPhase: "",
+      usedPhases: [],
+      fallbackReasons: [],
+      notes: []
+    };
+  }
+
+  function resetAutofillAiState() {
+    autofillAiState = createAutofillAiState();
+  }
+
+  function appendUniqueText(list, value, maxLength = 160) {
+    const text = normalizeText(value || "", maxLength);
+    if (!text || list.includes(text)) {
+      return list;
+    }
+    return [...list, text];
+  }
+
+  function normalizeAutofillAiReason(reason) {
+    return {
+      phase: normalizeText(reason?.phase || "", 60),
+      reason: normalizeText(reason?.reason || "", 180)
+    };
+  }
+
+  function formatErrorMessage(error) {
+    if (!error) {
+      return "未知错误";
+    }
+    if (error instanceof Error) {
+      return normalizeText(error.message || String(error), 180);
+    }
+    return normalizeText(String(error), 180);
+  }
+
+  function setAutofillAiTrying(phase) {
+    autofillAiState = {
+      ...autofillAiState,
+      status: "trying",
+      attempted: true,
+      currentPhase: normalizeText(phase || "AI 增强", 60)
+    };
+    renderFloatingStatus();
+  }
+
+  function setAutofillAiUsed(phase) {
+    const phaseText = normalizeText(phase || "AI 增强", 60);
+    autofillAiState = {
+      ...autofillAiState,
+      status: autofillAiState.fallback ? "partial" : "used",
+      attempted: true,
+      used: true,
+      currentPhase: "",
+      usedPhases: appendUniqueText(autofillAiState.usedPhases || [], phaseText, 60)
+    };
+    renderFloatingStatus();
+  }
+
+  function setAutofillAiNoResult(phase, note) {
+    const phaseText = normalizeText(phase || "AI 增强", 60);
+    const notes = appendUniqueText(autofillAiState.notes || [], note || `${phaseText}未返回可用增强`, 160);
+    let status = "no-result";
+    if (autofillAiState.used && autofillAiState.fallback) {
+      status = "partial";
+    } else if (autofillAiState.used) {
+      status = "used";
+    } else if (autofillAiState.fallback) {
+      status = "fallback";
+    }
+    autofillAiState = {
+      ...autofillAiState,
+      status,
+      attempted: true,
+      currentPhase: "",
+      notes
+    };
+    renderFloatingStatus();
+  }
+
+  function setAutofillAiFallback(phase, error) {
+    const phaseText = normalizeText(phase || "AI 增强", 60);
+    const reason = formatErrorMessage(error);
+    const nextReason = normalizeAutofillAiReason({ phase: phaseText, reason });
+    const fallbackReasons = (autofillAiState.fallbackReasons || [])
+      .map(normalizeAutofillAiReason)
+      .filter((item) => item.phase || item.reason);
+    const duplicate = fallbackReasons.some((item) => item.phase === nextReason.phase && item.reason === nextReason.reason);
+    autofillAiState = {
+      ...autofillAiState,
+      status: autofillAiState.used ? "partial" : "fallback",
+      attempted: true,
+      fallback: true,
+      currentPhase: "",
+      fallbackReasons: duplicate ? fallbackReasons : [...fallbackReasons, nextReason]
+    };
+    renderFloatingStatus();
+  }
+
+  function formatAutofillAiFallbackReasons(state = autofillAiState) {
+    const reasons = Array.isArray(state?.fallbackReasons) ? state.fallbackReasons : [];
+    return reasons
+      .map(normalizeAutofillAiReason)
+      .filter((item) => item.phase || item.reason)
+      .map((item) => `${item.phase || "AI"}：${item.reason || "未知错误"}`)
+      .join("；");
+  }
+
+  function getAutofillAiStatusText(state = autofillAiState) {
+    const status = state?.status || "idle";
+    const phase = normalizeText(state?.currentPhase || "", 60);
+    const usedPhases = Array.isArray(state?.usedPhases) ? state.usedPhases.filter(Boolean).join("、") : "";
+    const fallbackReasons = formatAutofillAiFallbackReasons(state);
+
+    if (status === "trying") {
+      return `正在尝试 AI ${phase || "增强"}，只发送字段目录，不发送资料值。`;
+    }
+    if (state?.used && state?.fallback) {
+      return `AI 部分参与${usedPhases ? `（${usedPhases}）` : ""}，失败步骤已回退本地规则${fallbackReasons ? `：${fallbackReasons}` : ""}。`;
+    }
+    if (state?.used) {
+      return `AI 已参与${usedPhases ? `（${usedPhases}）` : ""}，写入仍在本地执行。`;
+    }
+    if (state?.fallback) {
+      return `AI 不可用，已回退本地规则${fallbackReasons ? `：${fallbackReasons}` : ""}。`;
+    }
+    if (status === "no-result" || state?.attempted) {
+      return "AI 已尝试但未返回可用增强，本次继续使用本地规则。";
+    }
+    return "未调用 AI，本次使用本地规则。";
+  }
+
+  function getAutofillAiBadgeText(state = autofillAiState) {
+    const status = state?.status || "idle";
+    if (status === "trying") {
+      return "正在尝试 AI · 不发送资料值";
+    }
+    if (state?.used && state?.fallback) {
+      return "AI 部分参与 · 其余回退本地";
+    }
+    if (state?.used) {
+      return "AI 已参与 · 写入本地";
+    }
+    if (state?.fallback) {
+      return "AI 不可用 · 已回退本地规则";
+    }
+    if (status === "no-result" || state?.attempted) {
+      return "AI 无可用增强 · 使用本地规则";
+    }
+    return "";
+  }
+
+  function getAutofillModeBadgeText(state = autofillAiState, progress = autofillProgress) {
+    const status = state?.status || "idle";
+    const phase = normalizeText(state?.currentPhase || "", 60);
+    const stage = normalizeText(progress?.stage || "", 80);
+
+    if (status === "trying") {
+      if (/字段映射/.test(phase)) {
+        return "AI · 正在生成字段映射";
+      }
+      return "AI · 正在分析页面字段";
+    }
+    if (state?.used && state?.fallback) {
+      return "AI 部分参与 · 其余本地规则";
+    }
+    if (state?.fallback) {
+      return "本地规则 · AI 不可用已回退";
+    }
+    if (status === "no-result" || state?.attempted) {
+      return "本地规则 · AI 无可用增强";
+    }
+    if (state?.used) {
+      if (/写入匹配项/.test(stage)) {
+        return "本地写入 · AI 不参与写入";
+      }
+      if (/匹配本地资料|整理匹配结果|匹配完成/.test(stage)) {
+        return "AI 已分析 · 本地规则匹配";
+      }
+      return "AI 已参与 · 本地继续处理";
+    }
+    if (/读取本机资料|开始填写|扫描页面并准备填写/.test(stage)) {
+      return "本地规则 · 正在读取资料";
+    }
+    if (/扫描当前页面/.test(stage)) {
+      return "本地规则 · 正在扫描页面";
+    }
+    if (/分析页面结构/.test(stage)) {
+      return "本地规则 · 正在整理字段";
+    }
+    if (/匹配本地资料|整理匹配结果|匹配完成/.test(stage)) {
+      return "本地规则 · 正在匹配资料";
+    }
+    if (/写入匹配项/.test(stage)) {
+      return "本地写入 · 不自动提交";
+    }
+    return "本地规则 · 正在处理";
+  }
+
+  function getAutofillCompletionBadgeText(state = autofillAiState) {
+    const status = state?.status || "idle";
+    if (state?.used && state?.fallback) {
+      return "AI 部分参与 · 本地完成";
+    }
+    if (state?.used) {
+      return "AI 参与分析/映射 · 本地写入";
+    }
+    if (state?.fallback) {
+      return "本地规则完成 · AI 已回退";
+    }
+    if (status === "no-result" || state?.attempted) {
+      return "本地规则完成 · AI 无增强";
+    }
+    return "本地规则完成";
+  }
+
+  function sanitizeAutofillAiUsage(aiUsage = {}) {
+    const fallbackReasons = Array.isArray(aiUsage.fallbackReasons)
+      ? aiUsage.fallbackReasons.map(normalizeAutofillAiReason).filter((item) => item.phase || item.reason)
+      : [];
+    const usedPhases = Array.isArray(aiUsage.usedPhases)
+      ? aiUsage.usedPhases.map((phase) => normalizeText(phase || "", 60)).filter(Boolean)
+      : [];
+    const notes = Array.isArray(aiUsage.notes)
+      ? aiUsage.notes.map((note) => normalizeText(note || "", 160)).filter(Boolean)
+      : [];
+    const state = {
+      status: normalizeText(aiUsage.status || "idle", 40),
+      attempted: Boolean(aiUsage.attempted),
+      used: Boolean(aiUsage.used),
+      fallback: Boolean(aiUsage.fallback),
+      currentPhase: normalizeText(aiUsage.currentPhase || "", 60),
+      usedPhases,
+      fallbackReasons,
+      notes
+    };
+    const fallbackReason = normalizeText(aiUsage.fallbackReason || formatAutofillAiFallbackReasons(state), 260);
+    return {
+      ...state,
+      fallbackReason,
+      message: normalizeText(aiUsage.message || getAutofillAiStatusText(state), 300),
+      badge: normalizeText(aiUsage.badge || getAutofillAiBadgeText(state), 80)
+    };
+  }
+
+  function getAutofillAiSnapshot() {
+    return sanitizeAutofillAiUsage(autofillAiState);
+  }
+
   function getDisplayedProgressPercent() {
     if (!autofillProgress.active) {
       return 0;
@@ -546,8 +830,8 @@
     }
     const detail = autofillProgress.detail || "正在处理当前网页，请勿重复点击。";
     const elapsed = formatElapsedTime(autofillProgress.stageStartedAt);
-    const isAiStage = /^AI\s/.test(autofillProgress.stage || "");
-    if (isAiStage && elapsed) {
+    const isAiTrying = autofillAiState.status === "trying";
+    if (isAiTrying && elapsed) {
       return `${detail}，正在等待 API 响应，已等待 ${elapsed}`;
     }
     if (elapsed) {
@@ -564,6 +848,8 @@
     autofillInProgress = true;
     autofillRunId += 1;
     autofillSummary = null;
+    lastAutofillDebug = null;
+    resetAutofillAiState();
     setAutofillProgress(stage, 4, "准备开始", true);
     return autofillRunId;
   }
@@ -580,8 +866,19 @@
       activeProfileCategory,
       autofillInProgress,
       autofillProgress: { ...autofillProgress },
-      autofillSummary: autofillSummary ? { ...autofillSummary } : null
+      autofillSummary: autofillSummary ? { ...autofillSummary } : null,
+      autofillAi: getAutofillAiSnapshot(),
+      hasDebugSnapshot: Boolean(lastAutofillDebug)
     };
+  }
+
+  function getAutofillDebugSnapshot() {
+    return lastAutofillDebug
+      ? {
+          ...lastAutofillDebug,
+          exportedAt: new Date().toISOString()
+        }
+      : null;
   }
 
   function getProfilePanelStateSnapshot() {
@@ -924,8 +1221,23 @@
   }
 
   function isOptionOnlyLabel(value) {
-    return /^(男|女|是|否|有|无|未参加|参加过|至今|填写结束时间|长期有效|填写有效期)$/i.test(
-      normalizeText(value, 40)
+    const text = normalizeText(value, 120);
+    const key = compactText(text);
+    if (!key) {
+      return false;
+    }
+    if (/^(男|女|男女|是|否|是否|否是|有|无|有无|未参加|参加过|至今|填写结束时间|长期有效|填写有效期)$/i.test(key)) {
+      return true;
+    }
+    return (
+      key.length <= 80 &&
+      (
+        /^(离婚|离异|丧偶|已婚|未婚){2,}$/.test(key) ||
+        /^(博士研究生|硕士研究生|大学本科|大学专科|中等专科|职业高中|技工学校|普通高中|其他|无){2,}$/.test(key) ||
+        /^(博士|硕士|学士|其他|无){2,}$/.test(key) ||
+        /^(A型|B型|AB型|O型|其他){2,}$/i.test(key) ||
+        /^(全日制|非全日制|无数据){1,3}$/.test(key)
+      )
     );
   }
 
@@ -1149,24 +1461,49 @@
     return label;
   }
 
+  function extractContextualLabelFromText(text) {
+    const source = normalizeText(text, 500);
+    if (!source) {
+      return "";
+    }
+
+    const parts = source.split(/\s*\|\s*/).map((part) => normalizeText(part, 140)).filter(Boolean);
+    for (const part of parts) {
+      const match = part.match(/(?:^|[\s*＊])([^:：]{1,70})[:：]/);
+      const label = normalizeFieldLabelText(match ? match[1] : part);
+      if (
+        label &&
+        !isGenericFieldLabel(label) &&
+        !isOptionOnlyLabel(label) &&
+        !/^\d+\/\d+$/.test(label) &&
+        !/请上传|请选择|请输入|无数据/.test(label)
+      ) {
+        return label;
+      }
+    }
+
+    return "";
+  }
+
   function improveFieldLabel(element, rawLabel, nearbyText) {
     const container = findFieldContainer(element);
     const containerLabel = extractFieldContainerLabel(container);
+    const contextLabel = extractContextualLabelFromText(nearbyText);
     const placeholder = normalizeText(element.getAttribute("placeholder"), 100);
     const placeholderLabel = getPlaceholderDerivedLabel(placeholder, getTextWithoutControls(container));
     const raw = normalizeFieldLabelText(rawLabel);
     let label = raw;
 
     if (isGenericFieldLabel(label) || isOptionOnlyLabel(label)) {
-      label = containerLabel || label;
+      label = contextLabel || containerLabel || label;
     }
 
     if (placeholderLabel && (isGenericFieldLabel(label) || /原因|分数|行业属性|工作内容|奖励|活动|评价|专长/.test(placeholderLabel))) {
       label = placeholderLabel;
     }
 
-    if (isGenericFieldLabel(label)) {
-      label = normalizeFieldLabelText(nearbyText.split(/\s*\|\s*/)[0]);
+    if (isGenericFieldLabel(label) || isOptionOnlyLabel(label)) {
+      label = contextLabel || normalizeFieldLabelText(nearbyText.split(/\s*\|\s*/)[0]);
     }
 
     return disambiguateGroupedFieldLabel(element, normalizeFieldLabelText(label), container, placeholder);
@@ -1192,6 +1529,7 @@
 
   function getSectionText(element) {
     const parts = [];
+    const elementRect = element.getBoundingClientRect();
     const adapterSelectors = getAdapterSelectors();
     const headingSelector = [
       "h1",
@@ -1210,25 +1548,89 @@
       .filter(Boolean)
       .join(",");
 
+    const pushText = (text) => {
+      const normalized = normalizeSectionHeadingText(text);
+      if (normalized) {
+        parts.push(normalized);
+        return;
+      }
+      const plain = normalizeText(text, 180);
+      if (plain && plain.length <= 180 && /[\u4e00-\u9fa5A-Za-z]/.test(plain)) {
+        parts.push(plain);
+      }
+    };
+
     let current = element.parentElement;
-    for (let depth = 0; current && depth < 6; depth += 1, current = current.parentElement) {
-      const heading = current.querySelector(headingSelector);
-      const headingText = getElementText(heading);
-      if (headingText && headingText.length <= 120) {
-        parts.push(headingText);
+    for (let depth = 0; current && depth < 10; depth += 1, current = current.parentElement) {
+      const headingText = getNearestScopedHeadingText(current, headingSelector, element, elementRect);
+      if (headingText) {
+        pushText(headingText);
       }
 
       let previous = current.previousElementSibling;
-      for (let i = 0; previous && i < 4; i += 1, previous = previous.previousElementSibling) {
+      for (let i = 0; previous && i < 8; i += 1, previous = previous.previousElementSibling) {
         const text = getElementText(previous);
-        if (text && text.length <= 120 && /[\u4e00-\u9fa5A-Za-z]/.test(text)) {
-          parts.push(text);
+        if (text && /[\u4e00-\u9fa5A-Za-z]/.test(text)) {
+          pushText(text);
           break;
         }
       }
     }
 
     return normalizeText([...new Set(parts)].join(" | "), 240);
+  }
+
+  function getNearestScopedHeadingText(root, headingSelector, element, elementRect) {
+    if (!root?.querySelectorAll || !headingSelector) {
+      return "";
+    }
+
+    let best = null;
+    let bestBottom = -Infinity;
+    for (const heading of Array.from(root.querySelectorAll(headingSelector))) {
+      if (!(heading instanceof Element) || heading.contains(element)) {
+        continue;
+      }
+      const rect = heading.getBoundingClientRect();
+      if (rect.bottom > elementRect.top + 8 || rect.bottom < bestBottom) {
+        continue;
+      }
+      const text = getElementText(heading);
+      if (!text || text.length > 260) {
+        continue;
+      }
+      best = text;
+      bestBottom = rect.bottom;
+    }
+    return best || "";
+  }
+
+  function normalizeSectionHeadingText(text) {
+    const key = compactText(text);
+    if (!key) {
+      return "";
+    }
+
+    const sections = [
+      ["基本信息", /基本信息|个人信息/],
+      ["教育经历", /教育经历|教育背景/],
+      ["工作经历", /工作经历/],
+      ["绩效考核", /近三年年度绩效考核|绩效考核/],
+      ["家庭信息", /家庭及社会关系|家庭情况|家庭信息|社会关系/],
+      ["证书技能", /证书信息|证书技能|资格证书/],
+      ["专业资格", /专业技术资格|职业资格|职称/],
+      ["奖惩情况", /奖惩信息|奖惩情况/],
+      ["自我描述", /自我评价及相关情况说明|自我评价|自我描述/],
+      ["有关声明", /有关声明/]
+    ];
+
+    for (const [label, pattern] of sections) {
+      if (pattern.test(key)) {
+        return label;
+      }
+    }
+
+    return "";
   }
 
   function getOptions(element) {
@@ -1331,13 +1733,33 @@
     return "";
   }
 
+  function hasMeaningfulControlValue(element, label, currentValue) {
+    const value = normalizeText(currentValue, 120);
+    if (!value || /^(请选择|请先选择|无数据|undefined|null)$/i.test(value)) {
+      return false;
+    }
+
+    const labelKey = normalizeMatchKey(label);
+    if (
+      element instanceof HTMLInputElement &&
+      (element.type === "number" || element.getAttribute("role") === "spinbutton") &&
+      /^(0|1|0\.0+|1\.0+)$/.test(value) &&
+      /身高|体重|收入|薪资|年薪/.test(labelKey)
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
   function buildFieldMeta(element) {
     const adapter = getActiveSiteAdapter();
     const type = getControlType(element);
     const canFill = !element.disabled && type !== "file";
-    const rawLabel = normalizeText(getLabelByFor(element) || getWrappingLabel(element) || getAriaLabelText(element));
+    const rawLabel = normalizeText(getLabelByFor(element) || getAdapterLabelText(element) || getWrappingLabel(element) || getAriaLabelText(element));
     const nearbyText = getNearbyText(element);
     const label = improveFieldLabel(element, rawLabel, nearbyText);
+    const currentValue = getControlCurrentValue(element);
 
     return {
       fieldId: getOrCreateFieldId(element),
@@ -1350,7 +1772,8 @@
       required: Boolean(element.required || element.getAttribute("aria-required") === "true"),
       disabled: Boolean(element.disabled),
       readOnly: Boolean(element.readOnly || element.getAttribute("aria-readonly") === "true"),
-      hasCurrentValue: Boolean(getControlCurrentValue(element)),
+      hasCurrentValue: hasMeaningfulControlValue(element, label, currentValue),
+      currentValue,
       canFill,
       section: getSectionText(element),
       nearbyText,
@@ -2017,7 +2440,7 @@
         <button class="arf-float-close" type="button" data-action="float-hide" title="隐藏">×</button>
       </div>
       <div class="arf-float-privacy">隐私：资料只保存在本机；插件不会自动提交。</div>
-      <div class="arf-float-ai" data-role="float-ai" hidden>AI 正在分析页面字段</div>
+      <div class="arf-float-ai" data-role="float-ai" hidden></div>
       <div class="arf-float-progress" data-role="float-progress">
         <div class="arf-float-track">
           <div class="arf-float-fill" data-role="float-fill"></div>
@@ -2050,7 +2473,8 @@
       failed: Number(summary?.failed || 0),
       skipped: Number(summary?.skipped || 0),
       total: Number(summary?.total || 0),
-      message: normalizeText(summary?.message || "", 160)
+      message: normalizeText(summary?.message || "", 160),
+      aiUsage: sanitizeAutofillAiUsage(summary?.aiUsage || getAutofillAiSnapshot())
     };
     renderFloatingStatus();
   }
@@ -2069,9 +2493,9 @@
     const progress = floating.querySelector('[data-role="float-progress"]');
     const fill = floating.querySelector('[data-role="float-fill"]');
     const chips = floating.querySelector('[data-role="float-chips"]');
-    const aiActive = Boolean(autofillProgress.active && /^AI\s/.test(autofillProgress.stage || ""));
 
     if (autofillProgress.active) {
+      const modeBadge = getAutofillModeBadgeText(autofillAiState, autofillProgress);
       if (title) {
         title.textContent = getAutofillProgressTitle() || "正在填写";
       }
@@ -2089,15 +2513,14 @@
         chips.textContent = "";
       }
       if (aiFlag) {
-        aiFlag.hidden = !aiActive;
-        if (aiActive) {
-          aiFlag.textContent = "AI 阶段 · 不发送资料值";
-        }
+        aiFlag.hidden = !modeBadge;
+        aiFlag.textContent = modeBadge || "";
       }
       return;
     }
 
     const summary = autofillSummary || {};
+    const modeBadge = getAutofillCompletionBadgeText(summary.aiUsage || autofillAiState);
     if (title) {
       title.textContent = "填写完成";
     }
@@ -2116,8 +2539,8 @@
       `;
     }
     if (aiFlag) {
-      aiFlag.hidden = true;
-      aiFlag.textContent = "AI 正在分析页面字段";
+      aiFlag.hidden = !modeBadge;
+      aiFlag.textContent = modeBadge || "";
     }
   }
 
@@ -2372,6 +2795,12 @@
     if (/工作经历/.test(text)) {
       return "工作经历";
     }
+    if (/绩效考核|考核等级|考核排名/.test(text)) {
+      return "绩效考核";
+    }
+    if (/专业技术资格|职业资格|职称/.test(text)) {
+      return "专业资格";
+    }
     if (/社团|校园活动/.test(text)) {
       return "社团工作";
     }
@@ -2615,27 +3044,55 @@
 
   function inferMatchSection(field) {
     const text = compactText([field?.section, field?.nearbyText, field?.label].join(" "));
+    const label = normalizeMatchKey(field?.inferredLabel || field?.label || "");
     if (!text) {
       return "";
     }
 
-    if (/个人信息|基本信息|联系方式/.test(text)) {
+    if (/自我评价|自我描述|自我介绍|相关情况说明/.test(text)) {
+      return "自我描述";
+    }
+    if (/近三年年度绩效考核|绩效考核|考核年度|考核等级/.test(text)) {
+      return "绩效考核";
+    }
+    if (/证明人|联系方式|备注/.test(label) && /排名|考核|绩效|证明人/.test(text) && !/实习|实践|项目/.test(text)) {
+      return "绩效考核";
+    }
+    if (/专业技术资格|职业资格|职称/.test(text)) {
+      return "专业资格";
+    }
+    if (/家庭情况|家庭信息|家庭及社会关系|社会关系|亲属|与本人关系|是否退休/.test(text)) {
+      return "家庭信息";
+    }
+    if (/有关声明|声明|永居权|永久居留|背景调查|事实完全相符|非法组织|重大疾病|传染病|行政处罚|失信被执行人|境外居留|第三方企业|任兼职|持有企业股权|用人单位辞退/.test(text)) {
+      return "有关声明";
+    }
+    if (/求职意向|意向岗位|预计入职|期望工作城市|期望薪资|当前薪资|当前年收入|面试城市|意向城市|目标岗位|简历来源|目前工作地/.test(text)) {
+      return "求职意向";
+    }
+    if (
+      /个人信息|基本信息/.test(text) ||
+      /^(姓名|性别|出生日期|民族|政治面貌|籍贯|户口所在地|现户口所在地|当前居住地|当前居住地详细地址|净身高cm|身高|体重kg|体重|血型|婚姻状况|电子邮箱|手机号码|电话)$/.test(label)
+    ) {
       return "基本信息";
     }
-    if (/求职意向|意向岗位|预计入职|期望工作城市|期望薪资|当前薪资|面试城市|意向城市|目标岗位/.test(text)) {
-      return "求职意向";
+    if (/证书信息|证书类别|证书名称|发证单位|证书编号/.test(text)) {
+      return "证书技能";
     }
     if (/教育经历|学历|学校名称|学院名称|专业名称|培养方式|升学类型/.test(text)) {
       return "教育经历";
     }
-    if (/工作实习经历|工作\/实习经历|实习经历|实践|单位名称|职位名称|证明人/.test(text)) {
+    if (/工作经历|有无工作经历|现工作单位|当前工作单位|工作职责/.test(text)) {
+      return "工作经历";
+    }
+    if (/工作实习经历|工作\/实习经历|实习经历|实践|单位名称|职位名称/.test(text)) {
       return "实习经历";
     }
     if (/在校职务|社团|学生工作|部门名称/.test(text)) {
       return /学生工作/.test(text) ? "学生工作" : "社团工作";
     }
-    if (/工作经历|公司名称|部门|职级|工作职责/.test(text)) {
-      return "工作经历";
+    if (/奖惩信息|奖惩情况|奖惩名称|奖惩时间|奖励|荣誉|获奖|学术成果/.test(text)) {
+      return "奖惩情况";
     }
     if (/技能|资格证书|证书|计算机水平|其它技能|语言能力|语言类型|四六级|六级|四级|TOEFL|IELTS|GRE|GMAT/i.test(text)) {
       if (/语言|外语|四六级|六级|四级|TOEFL|IELTS|GRE|GMAT/i.test(text)) {
@@ -2646,9 +3103,6 @@
       }
       return "证书技能";
     }
-    if (/家庭情况|家庭信息|亲属|与本人关系|工作单位|出生年月/.test(text)) {
-      return "家庭信息";
-    }
     if (/培训经历|培训名称|培训机构|培训课程/.test(text)) {
       return "培训经历";
     }
@@ -2658,14 +3112,8 @@
     if (/专利|专利名称|专利编号/.test(text)) {
       return "专利成果";
     }
-    if (/自我描述|自我评价|自我介绍/.test(text)) {
-      return "自我描述";
-    }
-    if (/受到奖励|奖励|学术成果|社会校园活动|社会\/校园活动|校园活动|兴趣爱好|特长|爱好及专长|自我评价/.test(text)) {
+    if (/受到奖励|学术成果|社会校园活动|社会\/校园活动|校园活动|兴趣爱好|特长|爱好及专长/.test(text)) {
       return "其他信息";
-    }
-    if (/声明|永居权|永久居留|背景调查|事实完全相符|非法组织|重大疾病|行政处罚|失信被执行人|境外居留|任职|持股/.test(text)) {
-      return "有关声明";
     }
     if (/是否|有无|能否|同意|接受|服从/.test(text) && /亲属|调剂|背景|居留|疾病|处罚|任职|持股|股票/.test(text)) {
       return "有关声明";
@@ -2755,20 +3203,21 @@
     }
 
     const compatiblePairs = new Map([
-      ["基本信息", ["其他信息"]],
+      ["基本信息", ["其他信息", "教育经历"]],
       ["教育经历", ["基本信息"]],
       ["实习经历", ["项目经历"]],
       ["项目经历", ["实习经历"]],
       ["工作经历", ["实习经历"]],
+      ["绩效考核", ["工作经历"]],
       ["社团工作", ["学生工作"]],
       ["学生工作", ["社团工作"]],
+      ["专业资格", ["证书技能"]],
       ["外语能力", ["语言能力", "证书技能"]],
       ["语言能力", ["外语能力", "证书技能"]],
       ["计算机技能", ["证书技能", "其他信息"]],
-      ["证书技能", ["外语能力", "计算机技能", "其他信息"]],
-      ["家庭信息", ["有关声明"]],
+      ["证书技能", ["外语能力", "计算机技能", "其他信息", "专业资格"]],
       ["自我描述", ["其他信息"]],
-      ["有关声明", ["家庭信息"]]
+      ["有关声明", ["其他信息"]]
     ]);
 
     const compatible = compatiblePairs.get(fieldCategory) || [];
@@ -2776,7 +3225,11 @@
   }
 
   function isExplanatoryField(text) {
-    return /原因|说明|理由|备注/.test(normalizeMatchKey(text));
+    const key = normalizeMatchKey(text);
+    if (/自我评价|自我描述|自我介绍|相关情况说明/.test(key)) {
+      return false;
+    }
+    return /原因|说明|理由|备注/.test(key);
   }
 
   function isExplanatoryEntry(text) {
@@ -2793,15 +3246,18 @@
     }
 
     const compatiblePairs = new Map([
+      ["基本信息", ["其他信息", "教育经历"]],
       ["实习经历", ["项目经历", "工作经历"]],
       ["工作经历", ["实习经历"]],
+      ["绩效考核", ["工作经历"]],
       ["项目经历", ["实习经历"]],
       ["社团工作", ["学生工作"]],
       ["学生工作", ["社团工作"]],
+      ["专业资格", ["证书技能"]],
       ["外语能力", ["语言能力", "证书技能"]],
       ["语言能力", ["外语能力", "证书技能"]],
       ["计算机技能", ["证书技能", "其他信息"]],
-      ["证书技能", ["外语能力", "语言能力", "计算机技能"]],
+      ["证书技能", ["外语能力", "语言能力", "计算机技能", "专业资格"]],
       ["有关声明", ["其他信息"]],
       ["自我描述", ["其他信息"]],
       ["其他信息", ["有关声明", "奖惩情况", "社团工作", "学生工作", "自我描述"]]
@@ -2816,6 +3272,74 @@
       return "";
     }
 
+    if (/是否存在亲属.*(应聘单位|本行|我行)|亲属在.*(应聘单位|本行|我行)/.test(key)) {
+      return "declarationRelativeAtEmployer";
+    }
+    if (/是否患有|传染病|高血压|心脏病|糖尿病|肾炎|精神病|影响工作的疾病|重大疾病/.test(key)) {
+      return "declarationDisease";
+    }
+    if (/第三方企业|任兼职|持有企业股权|私募股权/.test(key)) {
+      return "declarationThirdPartyEquity";
+    }
+    if (/不良行为记录|犯罪记录|行政处罚|党纪处分|违纪违规|失信被执行人/.test(key)) {
+      return "declarationBadRecord";
+    }
+    if (/用人单位辞退|曾被辞退|辞退情况/.test(key)) {
+      return "declarationDismissed";
+    }
+    if (/金融机构营销|业务风险/.test(key)) {
+      return "declarationFinancialMarketingRisk";
+    }
+    if (/境外.*(长期|永久)居留权|永久居留权|永居权/.test(key)) {
+      return "declarationOverseasResidence";
+    }
+    if (/教育经历.*最高学历/.test(key)) {
+      return "isHighestEducation";
+    }
+    if (/最高全日制学历/.test(key)) {
+      return "highestFullTimeEducation";
+    }
+    if (/最高学历/.test(key)) {
+      return "highestEducationLevel";
+    }
+    if (/是否海外学历|是否海外教育经历|是否为海外教育经历/.test(key)) {
+      return "overseasEducation";
+    }
+    if (/毕（结、肆）业|毕结肆业|毕业状态|毕业结业肄业在读/.test(key)) {
+      return "graduationStatus";
+    }
+    if (/学历证书号/.test(key)) {
+      return "educationCertificate";
+    }
+    if (/^学历$|学历层次|教育经历学历/.test(key)) {
+      return "educationLevel";
+    }
+    if (/^学位$|学位类型|教育经历学位/.test(key)) {
+      return "degree";
+    }
+    if (/绩效考核|考核年度|考核等级/.test(key)) {
+      if (/联系方式|联系电话|电话/.test(key)) {
+        return "performanceContact";
+      }
+      if (/证明人|推荐人/.test(key)) {
+        return "performanceReference";
+      }
+      if (/排名/.test(key)) {
+        return "performanceRank";
+      }
+      if (/绩效考核等级|考核等级/.test(key)) {
+        return "performanceLevel";
+      }
+    }
+    if (/专业技术资格|职业资格|职称/.test(key)) {
+      if (/有无|是否/.test(key)) {
+        return "professionalQualificationAvailable";
+      }
+      if (/职业资格证书|资格证书/.test(key)) {
+        return "professionalCertificate";
+      }
+      return "professionalQualification";
+    }
     if (/学校所在国家|学校国家/.test(key)) {
       return "schoolCountry";
     }
@@ -2842,6 +3366,24 @@
     }
     if (/证件号码|身份证号|身份证号码/.test(key)) {
       return "idNumber";
+    }
+    if (/民族/.test(key)) {
+      return "ethnicity";
+    }
+    if (/政治面貌|政治身份/.test(key)) {
+      return "politicalStatus";
+    }
+    if (/婚姻状况|婚姻状态/.test(key)) {
+      return "maritalStatus";
+    }
+    if (/血型|血液类型/.test(key)) {
+      return "bloodType";
+    }
+    if (/净身高|身高/.test(key)) {
+      return "height";
+    }
+    if (/体重/.test(key)) {
+      return "weight";
     }
     if (/确认邮箱|再次输入邮箱/.test(key)) {
       return "confirmEmail";
@@ -2879,11 +3421,23 @@
     if (/预计入职时间|可入职时间|到岗时间/.test(key)) {
       return "availableDate";
     }
+    if (/简历名称|简历标题/.test(key)) {
+      return "resumeTitle";
+    }
+    if (/有无工作经历|是否有工作经历/.test(key)) {
+      return "workExperienceAvailable";
+    }
+    if (/离职原因|离开原因/.test(key)) {
+      return "leavingReason";
+    }
     if (/意向岗位|目标岗位|应聘岗位|申请岗位/.test(key)) {
       return "targetPosition";
     }
     if (/当前薪资|目前薪资|现薪资/.test(key)) {
       return "currentSalary";
+    }
+    if (/当前年收入|目前年收入|现年收入/.test(key)) {
+      return "currentAnnualIncome";
     }
     if (/期望薪资|期望年薪|期望月薪|期望年收入/.test(key)) {
       return "expectedSalary";
@@ -2920,6 +3474,9 @@
     }
     if (/专业类型|专业名称|所学专业|专业$/.test(key)) {
       return "major";
+    }
+    if (/现工作单位|当前工作单位/.test(key)) {
+      return "currentEmployer";
     }
     if (/工作单位|单位名称|公司名称|^公司$|实习单位/.test(key)) {
       return "employer";
@@ -3065,6 +3622,9 @@
     if (/读写能力|读写/.test(key)) {
       return "readingWriting";
     }
+    if (/证书类别|证书类型|资格证书类别/.test(key)) {
+      return "certificateCategory";
+    }
     if (/证书编号|证书号码/.test(key)) {
       return "certificateNumber";
     }
@@ -3100,6 +3660,9 @@
     }
     if (/工作内容描述|工作内容|实践内容|职责描述/.test(key)) {
       return "description";
+    }
+    if (/奖惩解除时间|处分解除时间|解除时间/.test(key)) {
+      return "awardReleaseDate";
     }
     if (/奖惩时间|获奖时间|奖励时间/.test(key)) {
       return "awardDate";
@@ -3158,6 +3721,9 @@
     if (/专利成果|专利描述|专利说明/.test(key)) {
       return "patentResult";
     }
+    if (/是否退休|有无退休/.test(key)) {
+      return "retired";
+    }
     if (/爱好及专长|特长爱好/.test(key)) {
       return "hobby";
     }
@@ -3169,6 +3735,9 @@
     }
     if (/自我评价|个人评价/.test(key)) {
       return "selfEvaluation";
+    }
+    if (/招聘信息来源|简历来源|信息来源/.test(key)) {
+      return "source";
     }
     return "";
   }
@@ -3206,6 +3775,135 @@
       ],
       entry?.category
     );
+  }
+
+  function getFamilyRelationFromText(value) {
+    const text = compactText(value);
+    if (!text) {
+      return "";
+    }
+    if (/父亲|爸爸/.test(text)) {
+      return "父亲";
+    }
+    if (/母亲|妈妈/.test(text)) {
+      return "母亲";
+    }
+    if (/配偶|妻子|丈夫|爱人/.test(text)) {
+      return "配偶";
+    }
+    if (/兄弟|姐妹|哥哥|姐姐|弟弟|妹妹/.test(text)) {
+      return "兄弟姐妹";
+    }
+    if (/子女|儿子|女儿/.test(text)) {
+      return "子女";
+    }
+    return "";
+  }
+
+  function getFieldFamilyRelation(field) {
+    const textRelation = getFamilyRelationFromText([
+      field?.nearbyText,
+      field?.section,
+      field?.label,
+      field?.placeholder
+    ].join(" "));
+    if (textRelation) {
+      return textRelation;
+    }
+
+    const element = getElementByFieldRuntimeId(field);
+    const siblingRelation = getNearbyLabeledControlValue(element, /关系|与本人关系|亲属关系/);
+    return getFamilyRelationFromText(siblingRelation);
+  }
+
+  function getEntryFamilyRelation(entry) {
+    return getFamilyRelationFromText([
+      entry?.subsection,
+      entry?.label,
+      entry?.value,
+      ...(entry?.aliases || [])
+    ].join(" "));
+  }
+
+  function getFamilyRelationMatchBonus(field, entry, fieldCategory) {
+    if (entry?.category !== "家庭信息") {
+      return 0;
+    }
+
+    const fieldRelation = getFieldFamilyRelation(field);
+    if (fieldCategory && fieldCategory !== "家庭信息" && !fieldRelation) {
+      return 0;
+    }
+
+    const entryRelation = getEntryFamilyRelation(entry);
+    if (!fieldRelation || !entryRelation) {
+      return 0;
+    }
+    return fieldRelation === entryRelation ? 18 : -999;
+  }
+
+  function getElementByFieldRuntimeId(field) {
+    if (!field?.fieldId) {
+      return null;
+    }
+    try {
+      return document.querySelector(`[${FIELD_ATTR}="${CSS.escape(field.fieldId)}"]`);
+    } catch {
+      return null;
+    }
+  }
+
+  function getNearbyLabeledControlValue(element, labelPattern) {
+    const root = findRepeatItemRoot(element);
+    if (!root) {
+      return "";
+    }
+
+    const controls = Array.from(root.querySelectorAll(CONTROL_SELECTOR))
+      .filter((item, index, array) => array.indexOf(item) === index)
+      .filter((item) => !item.closest(`#${PANEL_ID}`))
+      .filter(isVisible);
+
+    for (const control of controls) {
+      if (control === element) {
+        continue;
+      }
+      const container = findFieldContainer(control);
+      const label = normalizeFieldLabelText(extractFieldContainerLabel(container) || getAdapterLabelText(control) || getNearbyText(control));
+      if (labelPattern.test(label)) {
+        const value = getControlCurrentValue(control);
+        if (value) {
+          return value;
+        }
+      }
+    }
+
+    return "";
+  }
+
+  function findRepeatItemRoot(element) {
+    if (!element) {
+      return null;
+    }
+
+    let current = element.parentElement;
+    let best = null;
+    for (let depth = 0; current && depth < 8; depth += 1, current = current.parentElement) {
+      if (current.closest?.(`#${PANEL_ID}`)) {
+        break;
+      }
+
+      const controls = Array.from(current.querySelectorAll?.(CONTROL_SELECTOR) || []).filter(isVisible);
+      const text = getTextWithoutControls(current);
+      if (controls.length >= 3 && controls.length <= 24 && text.length <= 2400) {
+        best = current;
+      }
+      if (/家庭|社会关系|亲属/.test(text) && controls.length >= 3 && controls.length <= 24) {
+        return current;
+      }
+    }
+
+    return best;
   }
 
   function isSemanticallyIncompatible(field, entry, fieldLabel, fieldCategory) {
@@ -3293,6 +3991,11 @@
       return 0;
     }
 
+    const relationBonus = getFamilyRelationMatchBonus(field, entry, fieldCategory);
+    if (relationBonus <= -999) {
+      return 0;
+    }
+
     const candidateLabels = buildCandidateLabels(fieldLabel, fieldCategory);
     let directScore = 0;
 
@@ -3316,6 +4019,12 @@
     }
 
     let score = directScore * 10;
+    const fieldBucket = getFieldSemanticBucket(field, fieldLabel, fieldCategory);
+    const entryBucket = getEntrySemanticBucket(entry);
+    if (fieldBucket && entryBucket && fieldBucket === entryBucket) {
+      score += 8;
+    }
+    score += relationBonus;
     score += textMatchScore(fieldText, entry.category) * 2;
     score += textMatchScore(fieldText, entry.subsection) * 8;
 
@@ -3422,9 +4131,10 @@
     const confidence = score >= 40 ? Math.max(0, Math.min(0.99, 0.45 + score / 100)) : Math.max(0, score / 120);
     const text = compactText([fieldLabel, fieldCategory, field.nearbyText, field.placeholder, field.name, field.id].join(" "));
     const writeMode = guessAutofillValueFieldType(field);
-    const autoFillScoreThreshold = field.hasCurrentValue ? 84 : 70;
+    const autoFillScoreThreshold = field.hasCurrentValue ? 84 : 55;
+    const alreadyMatches = valuesLookEquivalent(field.currentValue, value);
     const shouldAutoFill =
-      score >= autoFillScoreThreshold &&
+      (alreadyMatches || score >= autoFillScoreThreshold) &&
       value !== "" &&
       field.canFill &&
       !/上传|附件|照片|证件照|简历附件/.test(text);
@@ -3446,7 +4156,8 @@
       mappingSource: "本地规则",
       reason: "",
       shouldAutoFill,
-      canAutoFill: Boolean(value) && field.canFill && score >= 32,
+      canAutoFill: Boolean(value) && field.canFill && (alreadyMatches || score >= 32),
+      alreadyMatches,
       warning: buildCandidateWarning(field, entry, score, writeMode),
       score
     };
@@ -3475,8 +4186,8 @@
     candidate.score = score;
     candidate.mappingSource = "AI 映射";
     candidate.reason = normalizeText(mapping.reason || "", 160);
-    candidate.shouldAutoFill = confidence >= (field.hasCurrentValue ? 0.86 : 0.68) && Boolean(candidate.value) && field.canFill;
-    candidate.canAutoFill = confidence >= 0.42 && Boolean(candidate.value) && field.canFill;
+    candidate.shouldAutoFill = (candidate.alreadyMatches || confidence >= (field.hasCurrentValue ? 0.86 : 0.68)) && Boolean(candidate.value) && field.canFill;
+    candidate.canAutoFill = (candidate.alreadyMatches || confidence >= 0.42) && Boolean(candidate.value) && field.canFill;
     candidate.warning = buildAiCandidateWarning(candidate, mapping);
     return candidate;
   }
@@ -3537,6 +4248,150 @@
       }
     }
     return normalizeText(String(value), maxLength);
+  }
+
+  function normalizeComparableValue(value) {
+    const text = normalizeText(value, 120);
+    if (!text) {
+      return "";
+    }
+
+    return normalizeChoiceLabel(normalizeDateValue(text))
+      .replace(/大学本科/g, "本科")
+      .replace(/学校级/g, "校级")
+      .replace(/学院级/g, "院级")
+      .replace(/离异/g, "离婚")
+      .replace(/厘米|cm|CM|千克|公斤|kg|KG|万元|万/g, "");
+  }
+
+  function valuesLookEquivalent(left, right) {
+    const normalizedLeft = normalizeComparableValue(left);
+    const normalizedRight = normalizeComparableValue(right);
+    if (!normalizedLeft || !normalizedRight) {
+      return false;
+    }
+    return (
+      normalizedLeft === normalizedRight ||
+      normalizedLeft.includes(normalizedRight) ||
+      normalizedRight.includes(normalizedLeft)
+    );
+  }
+
+  function summarizeDebugField(field) {
+    const label = field?.inferredLabel || inferFieldLabel(field);
+    const category = field?.inferredCategory || inferMatchSection(field);
+    return {
+      fieldId: field?.fieldId || "",
+      label: normalizeText(label || "", 120),
+      category: normalizeText(category || "", 80),
+      type: normalizeText(field?.type || "", 40),
+      canFill: Boolean(field?.canFill),
+      hasCurrentValue: Boolean(field?.hasCurrentValue),
+      required: Boolean(field?.required),
+      placeholder: normalizeText(field?.placeholder || "", 80),
+      section: normalizeText(field?.section || "", 120)
+    };
+  }
+
+  function summarizeDebugCandidate(candidate) {
+    return {
+      fieldId: candidate.fieldId,
+      fieldLabel: normalizeText(candidate.fieldLabel || "", 120),
+      fieldCategory: normalizeText(candidate.fieldCategory || "", 80),
+      sourceLabel: normalizeText(candidate.sourceLabel || "", 120),
+      sourceCategory: normalizeText(candidate.sourceCategory || "", 80),
+      sourceSubsection: normalizeText(candidate.sourceSubsection || "", 120),
+      score: Number(candidate.score || 0),
+      confidence: Number(candidate.confidence || 0),
+      writeMode: candidate.writeMode || "",
+      mappingSource: candidate.mappingSource || "",
+      shouldAutoFill: Boolean(candidate.shouldAutoFill),
+      canAutoFill: Boolean(candidate.canAutoFill),
+      alreadyMatches: Boolean(candidate.alreadyMatches),
+      hasCurrentValue: Boolean(candidate.field?.hasCurrentValue),
+      warning: normalizeText(candidate.warning || "", 180),
+      reason: normalizeText(candidate.reason || "", 180)
+    };
+  }
+
+  function summarizeDebugResult(result) {
+    return {
+      id: result?.id || "",
+      ok: Boolean(result?.ok),
+      note: normalizeText(result?.note || "", 180)
+    };
+  }
+
+  function updateAutofillDebugPlan(plan, meta = {}) {
+    if (!plan) {
+      return;
+    }
+
+    const candidates = Array.isArray(plan.candidates) ? plan.candidates.map(summarizeDebugCandidate) : [];
+    const fields = Array.isArray(plan.scan?.fields) ? plan.scan.fields.map(summarizeDebugField) : [];
+    const autoFillCount = candidates.filter((candidate) => candidate.shouldAutoFill).length;
+    const confirmCount = candidates.filter((candidate) => !candidate.shouldAutoFill && candidate.canAutoFill).length;
+    const ignoredCount = Math.max(0, candidates.length - autoFillCount - confirmCount);
+    const aiUsage = sanitizeAutofillAiUsage(meta.aiUsage || getAutofillAiSnapshot());
+
+    lastAutofillDebug = {
+      version: SCRIPT_VERSION,
+      page: {
+        url: plan.page?.url || location.href,
+        title: plan.page?.title || document.title,
+        hostname: plan.page?.hostname || location.hostname
+      },
+      generatedAt: new Date().toISOString(),
+      mappingSource: plan.mappingSource || "",
+      aiStatus: normalizeText(meta.aiStatus || aiUsage.message || "", 300),
+      aiUsage,
+      scan: {
+        fieldCount: fields.length,
+        expandedEditCards: Number(plan.scan?.expandedEditCards || 0),
+        siteAdapter: plan.scan?.siteAdapter || null,
+        fields
+      },
+      counts: {
+        candidates: candidates.length,
+        autoFill: autoFillCount,
+        needsConfirm: confirmCount,
+        ignored: ignoredCount
+      },
+      candidates,
+      summary: null,
+      results: []
+    };
+  }
+
+  function updateAutofillDebugResults(summary, results) {
+    if (!lastAutofillDebug) {
+      lastAutofillDebug = {
+        version: SCRIPT_VERSION,
+        page: {
+          url: location.href,
+          title: document.title,
+          hostname: location.hostname
+        },
+        generatedAt: new Date().toISOString(),
+        counts: {},
+        candidates: [],
+        results: []
+      };
+    }
+
+    lastAutofillDebug.summary = {
+      attempted: Number(summary?.attempted || 0),
+      filled: Number(summary?.filled || 0),
+      failed: Number(summary?.failed || 0),
+      skipped: Number(summary?.skipped || 0),
+      total: Number(summary?.total || 0),
+      message: normalizeText(summary?.message || "", 160),
+      aiUsage: sanitizeAutofillAiUsage(summary?.aiUsage || getAutofillAiSnapshot())
+    };
+    lastAutofillDebug.aiUsage = sanitizeAutofillAiUsage(summary?.aiUsage || lastAutofillDebug.aiUsage || getAutofillAiSnapshot());
+    lastAutofillDebug.aiStatus = lastAutofillDebug.aiUsage.message;
+    lastAutofillDebug.results = Array.isArray(results) ? results.map(summarizeDebugResult) : [];
+    lastAutofillDebug.finishedAt = new Date().toISOString();
   }
 
   function buildAutofillPlan(scan) {
@@ -3660,6 +4515,7 @@
       return { plan, status: "本机资料目录为空，已使用本地规则。", usedAi: false };
     }
 
+    setAutofillAiTrying("字段映射");
     setAutofillProgress("AI 生成映射", 76, "正在匹配页面字段和本地资料目录");
     setProfilePanelStatus("正在调用 AI 识别字段语义。只发送字段目录，不发送资料值...");
     const response = await sendRuntimeMessage({
@@ -3675,6 +4531,7 @@
       .map((mapping) => createAiAutofillCandidate(mapping, scan, entries))
       .filter(Boolean);
     const enhancedPlan = mergeAiCandidatesIntoPlan(plan, aiCandidates, response?.notes || []);
+    setAutofillAiUsed("字段映射");
     setAutofillProgress("AI 生成映射", 86, `已合并 ${aiCandidates.length} 项`);
 
     return {
@@ -3686,6 +4543,7 @@
 
   async function enhanceScanWithAi(scan) {
     try {
+      setAutofillAiTrying("页面结构分析");
       setAutofillProgress("AI 分析页面结构", 50, "正在识别字段名称和控件类型");
       setProfilePanelStatus("正在分析页面结构，只发送字段信息...");
       const response = await sendRuntimeMessage({
@@ -3697,6 +4555,8 @@
 
       const hints = Array.isArray(response?.fieldHints) ? response.fieldHints : [];
       if (hints.length === 0) {
+        setAutofillAiNoResult("页面结构分析", "页面结构 AI 未返回字段增强结果");
+        setAutofillProgress("分析页面结构", 60, "AI 未返回增强结果，继续使用本地规则");
         return { scan, status: "AI 未返回页面结构增强结果。", usedAi: false };
       }
 
@@ -3721,6 +4581,7 @@
         };
       }
 
+      setAutofillAiUsed("页面结构分析");
       setAutofillProgress("AI 分析页面结构", 60, `已识别 ${hints.length} 项`);
 
       return {
@@ -3737,9 +4598,12 @@
         usedAi: true
       };
     } catch (error) {
+      setAutofillAiFallback("页面结构分析", error);
+      setAutofillProgress("分析页面结构", 58, "AI 不可用，已回退本地规则");
+      setProfilePanelStatus("页面结构 AI 不可用，已使用本地规则继续。");
       return {
         scan,
-        status: `页面结构 AI 不可用，已回退本地规则：${error.message}`,
+        status: `页面结构 AI 不可用，已回退本地规则：${formatErrorMessage(error)}`,
         usedAi: false
       };
     }
@@ -3760,40 +4624,51 @@
     }
 
     try {
-      setAutofillProgress("读取本机资料", 8, "正在加载本机简历资料");
+      setAutofillProgress("读取本机资料", 8, "本地读取简历资料");
       await refreshCurrentProfile({ force: true });
-      setAutofillProgress("扫描当前页面", 24, "展开可编辑区域并提取字段");
-      setProfilePanelStatus("正在扫描当前页面并准备自动填写...");
+      setAutofillProgress("扫描当前页面", 24, "本地扫描页面字段并展开可编辑区域");
+      setProfilePanelStatus("正在本地扫描当前页面并准备自动填写...");
       const baseScan = await scanForm();
-      setAutofillProgress("分析页面结构", 42, `已发现 ${baseScan.fields.length} 个可见字段`);
+      setAutofillProgress("分析页面结构", 42, `本地已发现 ${baseScan.fields.length} 个可见字段`);
       const aiStructure = await enhanceScanWithAi(baseScan);
       const scan = aiStructure.scan || baseScan;
-      setAutofillProgress("匹配本地资料", 64, `正在匹配 ${scan.fields.length} 个字段`);
+      setAutofillProgress("匹配本地资料", 64, `本地规则正在匹配 ${scan.fields.length} 个字段`);
       let plan = buildAutofillPlan(scan);
-      let aiStatus = "未调用 AI。";
 
       try {
-        setAutofillProgress("AI 生成映射", 76, "正在匹配页面字段和本地资料目录");
         const aiResult = await enhancePlanWithAi(scan, plan);
         plan = aiResult.plan || plan;
-        aiStatus = aiResult.status || aiStatus;
       } catch (error) {
-        aiStatus = `AI 映射不可用，已回退本地规则：${error.message}`;
+        setAutofillAiFallback("字段映射", error);
+        setAutofillProgress("匹配本地资料", 84, "AI 不可用，已使用本地规则整理匹配结果");
       }
 
-      setAutofillProgress("整理匹配结果", 90, `已匹配 ${plan.candidates.length} 项`);
+      if (plan.mappingSource === "本地规则" && (autofillAiState.usedPhases || []).includes("页面结构分析")) {
+        plan = {
+          ...plan,
+          mappingSource: "AI 页面结构 + 本地规则"
+        };
+      }
+
+      const aiUsage = getAutofillAiSnapshot();
+      const aiStatus = aiUsage.message;
+      setAutofillProgress("整理匹配结果", 90, `本地整理完成，已匹配 ${plan.candidates.length} 项`);
+      updateAutofillDebugPlan(plan, { aiStatus, aiUsage });
 
       const autoFillCount = plan.autoFillIds.size;
       setProfilePanelStatus(
         plan.candidates.length > 0
-          ? `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 已匹配 ${plan.candidates.length} 项，将直接写入 ${autoFillCount} 项。`
-          : `${aiStructure.status || "页面结构已分析。"} ${aiStatus} 没有找到可自动匹配的字段。`
+          ? `${aiStatus} 已匹配 ${plan.candidates.length} 项，将直接写入 ${autoFillCount} 项。`
+          : `${aiStatus} 没有找到可自动匹配的字段。`
       );
-      setAutofillProgress("匹配完成", 90, "准备写入当前网页");
+      setAutofillProgress("匹配完成", 90, "本地规则匹配完成，准备写入当前网页");
       return {
         ok: true,
         plan,
         aiStatus,
+        aiUsage,
+        aiUsed: aiUsage.used,
+        aiFallbackReason: aiUsage.fallbackReason,
         autoFillCount
       };
     } catch (error) {
@@ -3823,6 +4698,7 @@
       }
 
       const plan = planResult.plan;
+      const aiUsage = sanitizeAutofillAiUsage(planResult.aiUsage || getAutofillAiSnapshot());
       const autoFillIds = plan?.autoFillIds instanceof Set
         ? plan.autoFillIds
         : new Set(Array.isArray(plan?.autoFillIds) ? plan.autoFillIds : []);
@@ -3830,18 +4706,27 @@
       if (!plan || autoFillIds.size === 0) {
         setProfilePanelStatus("没有找到可直接填写的字段。可以打开详情面板手动查看和复制资料。", true);
         const skippedCount = await markDeferredPlanCandidates(plan, autoFillIds);
-        setAutofillSummary({
+        const summary = {
           attempted: 0,
           filled: 0,
           failed: 0,
           skipped: skippedCount || plan?.candidates?.length || 0,
           total: plan?.candidates?.length || 0,
-          message: "没有找到高置信度可直填字段，黄色标记需要人工确认。"
-        });
-        return { ok: false, reason: "no candidates" };
+          message: "没有找到高置信度可直填字段，黄色标记需要人工确认。",
+          aiUsage
+        };
+        setAutofillSummary(summary);
+        updateAutofillDebugResults(summary, []);
+        return {
+          ok: false,
+          reason: "no candidates",
+          aiUsage,
+          aiUsed: aiUsage.used,
+          aiFallbackReason: aiUsage.fallbackReason
+        };
       }
 
-      setAutofillProgress("写入匹配项", 94, `准备写入 ${autoFillIds.size} 项`);
+      setAutofillProgress("写入匹配项", 94, `本地准备写入 ${autoFillIds.size} 项`);
       const beforeCount = autoFillIds.size;
       const fillResult = await applyAutofillPlan(plan, autoFillIds, { runId });
       if (profilePanelVisible) {
@@ -3856,7 +4741,10 @@
         filled: fillResult.filled || 0,
         failed: fillResult.failed || 0,
         skipped: fillResult.skipped || 0,
-        total: fillResult.total || 0
+        total: fillResult.total || 0,
+        aiUsage,
+        aiUsed: aiUsage.used,
+        aiFallbackReason: aiUsage.fallbackReason
       };
     } catch (error) {
       setProfilePanelStatus(`一键填写失败：${error.message}`, true);
@@ -3887,7 +4775,7 @@
 
     setProfilePanelStatus("正在把匹配项写入当前网页...");
     if (isCurrentAutofillRun(runId)) {
-      setAutofillProgress("写入匹配项", 94, `准备写入 ${autoFillCandidates.length} 项`);
+        setAutofillProgress("写入匹配项", 94, `本地准备写入 ${autoFillCandidates.length} 项`);
     }
     const results = [];
 
@@ -3899,9 +4787,14 @@
       let note = "";
 
       if (element) {
-        const fillResult = await fillElementSmart(element, candidate.value, field, candidate);
-        ok = Boolean(fillResult?.ok);
-        note = fillResult?.reason || fillResult?.warning || "";
+        if (candidate.alreadyMatches) {
+          ok = true;
+          note = "当前值已匹配本机资料";
+        } else {
+          const fillResult = await fillElementSmart(element, candidate.value, field, candidate);
+          ok = Boolean(fillResult?.ok);
+          note = fillResult?.reason || fillResult?.warning || "";
+        }
       } else {
         note = "未找到可写入控件";
       }
@@ -3912,7 +4805,7 @@
 
       if (isCurrentAutofillRun(runId)) {
         const percent = 94 + Math.round(((index + 1) / autoFillCandidates.length) * 6);
-        setAutofillProgress("写入匹配项", percent, `已处理 ${index + 1}/${autoFillCandidates.length} 项`);
+        setAutofillProgress("写入匹配项", percent, `本地已处理 ${index + 1}/${autoFillCandidates.length} 项`);
       }
 
       results.push({
@@ -3925,15 +4818,18 @@
     const filledCount = results.filter((result) => result.ok).length;
     const failedCount = results.length - filledCount;
     const skippedCount = await markDeferredPlanCandidates(plan, autoFillSet);
-    setProfilePanelStatus(`已尝试写入 ${results.length} 项，成功 ${filledCount} 项，需人工确认 ${skippedCount} 项。`);
-    setAutofillSummary({
+    const summary = {
       attempted: results.length,
       filled: filledCount,
       failed: failedCount,
       skipped: skippedCount,
       total: plan?.candidates?.length || results.length,
-      message: `页面已标记：绿色为已填写，黄色为需确认，红色为失败。`
-    });
+      message: `页面已标记：绿色为已填写，黄色为需确认，红色为失败。`,
+      aiUsage: getAutofillAiSnapshot()
+    };
+    setProfilePanelStatus(`已尝试写入 ${results.length} 项，成功 ${filledCount} 项，需人工确认 ${skippedCount} 项。`);
+    setAutofillSummary(summary);
+    updateAutofillDebugResults(summary, results);
     await persistProfilePanelState(getProfilePanelStateSnapshot());
     return {
       ok: true,
@@ -3942,6 +4838,7 @@
       failed: failedCount,
       skipped: skippedCount,
       total: plan?.candidates?.length || results.length,
+      aiUsage: summary.aiUsage,
       results
     };
   }
@@ -3955,6 +4852,9 @@
     let count = 0;
     for (const candidate of plan.candidates) {
       if (autoFillSet.has(candidate.id)) {
+        continue;
+      }
+      if (!candidate.canAutoFill) {
         continue;
       }
       const element = findFieldElement(candidate.field);
@@ -4149,7 +5049,11 @@
   }
 
   function normalizeChoiceLabel(value) {
-    return normalizeMatchKey(value);
+    return normalizeMatchKey(value)
+      .replace(/大学本科/g, "本科")
+      .replace(/学校级/g, "校级")
+      .replace(/学院级/g, "院级")
+      .replace(/离异/g, "离婚");
   }
 
   function normalizeChoiceValue(value, fallback = "") {
@@ -4222,6 +5126,11 @@
     await sleep(220);
 
     const target = normalizeChoiceValue(value, inferFieldLabel(field));
+    const hierarchicalResult = await tryFillHierarchicalChoiceOptions(value, target);
+    if (hierarchicalResult.ok) {
+      return hierarchicalResult;
+    }
+
     const options = findVisibleChoiceOptions(container);
     const matched = options.find((option) => choiceTextMatches(getElementText(option), target) || choiceTextMatches(option.getAttribute("aria-label") || "", target));
 
@@ -4248,6 +5157,42 @@
     }
 
     return { ok: false, reason: "no matching option found" };
+  }
+
+  async function tryFillHierarchicalChoiceOptions(value, target) {
+    const parts = splitHierarchicalChoiceValue(value);
+    if (parts.length < 2) {
+      return { ok: false, reason: "not hierarchical" };
+    }
+
+    let matchedAny = false;
+    for (const part of parts) {
+      const options = findVisibleChoiceOptions(document);
+      const matched = options.find((option) => {
+        const text = getElementText(option);
+        return choiceTextMatches(text, part) || choiceTextMatches(text, target);
+      });
+      if (!matched) {
+        return matchedAny ? { ok: true, warning: "hierarchical choice partially matched" } : { ok: false, reason: "no matching hierarchical option" };
+      }
+
+      clickActionElement(matched);
+      matchedAny = true;
+      await sleep(180);
+    }
+
+    return { ok: matchedAny };
+  }
+
+  function splitHierarchicalChoiceValue(value) {
+    const text = normalizeText(value, 120);
+    if (!/(省|自治区|北京市|上海市|天津市|重庆市|市|区|县)/.test(text)) {
+      return [];
+    }
+
+    const parts = text.match(/[^省市区县]+(?:省|市|区|县)|[^自治区]+自治区/g) || [];
+    const normalized = parts.map((part) => normalizeText(part, 40)).filter(Boolean);
+    return normalized.length >= 2 ? normalized : [];
   }
 
   function findChoiceFieldContainer(element) {
@@ -4857,6 +5802,10 @@
 
     if (message.type === "OJAF_GET_RUNTIME_STATE") {
       return getAutofillRuntimeState();
+    }
+
+    if (message.type === "OJAF_GET_DEBUG_SNAPSHOT") {
+      return getAutofillDebugSnapshot();
     }
 
     if (message.type === "OJAF_CLEAR_MARKS") {
