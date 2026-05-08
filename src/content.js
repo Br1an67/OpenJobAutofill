@@ -503,14 +503,14 @@
     if (/扫描当前页面/.test(text)) {
       return { index: 2, total: 6, label: "扫描当前页面" };
     }
-    if (/分析页面结构|AI 分析页面结构/.test(text)) {
-      return { index: 3, total: 6, label: "理解页面结构" };
+    if (/整理表单字段|AI 识别表单字段/.test(text)) {
+      return { index: 3, total: 6, label: "整理表单字段" };
     }
-    if (/匹配本地资料|AI 生成映射|整理匹配结果|匹配完成/.test(text)) {
+    if (/匹配本地资料|AI 识别字段|整理匹配结果|匹配完成/.test(text)) {
       return { index: 4, total: 6, label: "匹配你的资料" };
     }
-    if (/写入匹配项/.test(text)) {
-      return { index: 5, total: 6, label: "写入表单" };
+    if (/填写匹配项/.test(text)) {
+      return { index: 5, total: 6, label: "填写表单" };
     }
     return { index: 6, total: 6, label: "完成复核" };
   }
@@ -598,13 +598,13 @@
       ...autofillAiState,
       status: "trying",
       attempted: true,
-      currentPhase: normalizeText(phase || "AI 增强", 60)
+      currentPhase: normalizeText(phase || "AI 辅助识别", 60)
     };
     renderFloatingStatus();
   }
 
   function setAutofillAiUsed(phase) {
-    const phaseText = normalizeText(phase || "AI 增强", 60);
+    const phaseText = normalizeText(phase || "AI 辅助识别", 60);
     autofillAiState = {
       ...autofillAiState,
       status: autofillAiState.fallback ? "partial" : "used",
@@ -617,8 +617,8 @@
   }
 
   function setAutofillAiNoResult(phase, note) {
-    const phaseText = normalizeText(phase || "AI 增强", 60);
-    const notes = appendUniqueText(autofillAiState.notes || [], note || `${phaseText}未返回可用增强`, 160);
+    const phaseText = normalizeText(phase || "AI 辅助识别", 60);
+    const notes = appendUniqueText(autofillAiState.notes || [], note || `${phaseText}未返回可用建议`, 160);
     let status = "no-result";
     if (autofillAiState.used && autofillAiState.fallback) {
       status = "partial";
@@ -638,7 +638,7 @@
   }
 
   function setAutofillAiFallback(phase, error) {
-    const phaseText = normalizeText(phase || "AI 增强", 60);
+    const phaseText = normalizeText(phase || "AI 辅助识别", 60);
     const reason = formatErrorMessage(error);
     const nextReason = normalizeAutofillAiReason({ phase: phaseText, reason });
     const fallbackReasons = (autofillAiState.fallbackReasons || [])
@@ -667,24 +667,23 @@
 
   function getAutofillAiStatusText(state = autofillAiState) {
     const status = state?.status || "idle";
-    const phase = normalizeText(state?.currentPhase || "", 60);
     const usedPhases = Array.isArray(state?.usedPhases) ? state.usedPhases.filter(Boolean).join("、") : "";
     const fallbackReasons = formatAutofillAiFallbackReasons(state);
 
     if (status === "trying") {
-      return `正在尝试 AI ${phase || "增强"}，只发送字段目录，不发送资料值。`;
+      return `正在用 AI 辅助识别字段，只发送字段名称，不发送资料值。`;
     }
     if (state?.used && state?.fallback) {
-      return `AI 部分参与${usedPhases ? `（${usedPhases}）` : ""}，不可用步骤已回退本地规则${fallbackReasons ? `：${fallbackReasons}` : ""}。`;
+      return `AI 已辅助识别部分字段，其余已使用本地规则继续${fallbackReasons ? `：${fallbackReasons}` : ""}。`;
     }
     if (state?.used) {
-      return `AI 已参与${usedPhases ? `（${usedPhases}）` : ""}，写入仍在本地执行。`;
+      return `AI 已辅助识别字段${usedPhases ? `（${usedPhases}）` : ""}，具体填写仍在本机完成。`;
     }
     if (state?.fallback) {
-      return `AI 不可用，已回退本地规则${fallbackReasons ? `：${fallbackReasons}` : ""}。`;
+      return `AI 不可用，已使用本地规则继续${fallbackReasons ? `：${fallbackReasons}` : ""}。`;
     }
     if (status === "no-result" || state?.attempted) {
-      return "AI 已尝试但未返回可用增强，本次继续使用本地规则。";
+      return "AI 没有提供可用建议，本次继续使用本地规则。";
     }
     return "未调用 AI，本次使用本地规则。";
   }
@@ -695,28 +694,28 @@
     const stage = normalizeText(progress?.stage || "", 80);
 
     if (status === "trying") {
-      if (/字段映射/.test(phase)) {
-        return "AI · 正在生成字段映射";
+      if (/字段理解/.test(phase)) {
+        return "AI · 正在识别字段";
       }
       return "AI · 正在分析页面字段";
     }
     if (state?.used && state?.fallback) {
-      return "AI 部分参与 · 其余本地规则";
+      return "AI 辅助部分字段 · 其余本地规则";
     }
     if (state?.fallback) {
-      return "本地规则 · AI 不可用已回退";
+      return "本地规则 · AI 不可用";
     }
     if (status === "no-result" || state?.attempted) {
-      return "本地规则 · AI 无可用增强";
+      return "本地规则 · AI 无可用建议";
     }
     if (state?.used) {
-      if (/写入匹配项/.test(stage)) {
-        return "本地写入 · AI 不参与写入";
+      if (/填写匹配项/.test(stage)) {
+        return "本地填写 · AI 不参与填写";
       }
       if (/匹配本地资料|整理匹配结果|匹配完成/.test(stage)) {
-        return "AI 已分析 · 本地规则匹配";
+        return "AI 已识别字段 · 本地匹配";
       }
-      return "AI 已参与 · 本地继续处理";
+      return "AI 已识别字段 · 本地继续处理";
     }
     if (/读取本机资料|开始填写|扫描页面并准备填写/.test(stage)) {
       return "本地规则 · 正在读取资料";
@@ -724,14 +723,14 @@
     if (/扫描当前页面/.test(stage)) {
       return "本地规则 · 正在扫描页面";
     }
-    if (/分析页面结构/.test(stage)) {
+    if (/整理表单字段/.test(stage)) {
       return "本地规则 · 正在整理字段";
     }
     if (/匹配本地资料|整理匹配结果|匹配完成/.test(stage)) {
       return "本地规则 · 正在匹配资料";
     }
-    if (/写入匹配项/.test(stage)) {
-      return "本地写入 · 不自动提交";
+    if (/填写匹配项/.test(stage)) {
+      return "本地填写 · 不自动提交";
     }
     return "本地规则 · 正在处理";
   }
@@ -739,16 +738,16 @@
   function getAutofillCompletionBadgeText(state = autofillAiState) {
     const status = state?.status || "idle";
     if (state?.used && state?.fallback) {
-      return "AI 部分参与 · 本地完成";
+      return "AI 辅助部分字段 · 本地完成";
     }
     if (state?.used) {
-      return "AI 参与分析/映射 · 本地写入";
+      return "AI 辅助识别 · 本地填写";
     }
     if (state?.fallback) {
-      return "本地规则完成 · AI 已回退";
+      return "本地规则完成 · AI 不可用";
     }
     if (status === "no-result" || state?.attempted) {
-      return "本地规则完成 · AI 无增强";
+      return "本地规则完成 · AI 无建议";
     }
     return "本地规则完成";
   }
@@ -2423,8 +2422,8 @@
       </div>
       <div class="arf-float-chips" data-role="float-chips" hidden></div>
       <div class="arf-float-actions">
-        <button type="button" data-action="float-detail">查看详情</button>
-        <button class="secondary" type="button" data-action="float-clear">清除标记</button>
+        <button type="button" data-action="float-detail">打开资料面板</button>
+        <button class="secondary" type="button" data-action="float-clear">清除颜色标记</button>
       </div>
     `;
 
@@ -2578,7 +2577,7 @@
     const subtitle = document.createElement("div");
     subtitle.className = "arf-subtitle";
     subtitle.dataset.role = "subtitle";
-    subtitle.textContent = "本机简历资料。用于查看、搜索和复制，开始填写会直接扫描并写入当前网页。";
+    subtitle.textContent = "本机简历资料。用于查看、搜索和复制；开始填写会扫描并自动填写当前网页。";
     titleWrap.append(title, subtitle);
 
     const headerActions = document.createElement("div");
@@ -4161,7 +4160,7 @@
     const candidate = createAutofillCandidate(field, entry, Math.max(score, 35));
     candidate.confidence = confidence;
     candidate.score = score;
-    candidate.mappingSource = "AI 映射";
+    candidate.mappingSource = "AI 辅助识别";
     candidate.reason = normalizeText(mapping.reason || "", 160);
     candidate.shouldAutoFill = (candidate.alreadyMatches || confidence >= (field.hasCurrentValue ? 0.86 : 0.68)) && Boolean(candidate.value) && field.canFill;
     candidate.canAutoFill = (candidate.alreadyMatches || confidence >= 0.42) && Boolean(candidate.value) && field.canFill;
@@ -4172,13 +4171,13 @@
   function buildAiCandidateWarning(candidate, mapping) {
     const notes = [];
     if (candidate.field?.hasCurrentValue) {
-      notes.push(candidate.shouldAutoFill ? "当前字段已有内容，写入时会覆盖" : "当前字段已有内容，低置信度时不会自动覆盖");
+      notes.push(candidate.shouldAutoFill ? "当前字段已有内容，自动填写时会覆盖" : "当前字段已有内容，已转为待处理");
     }
     if (candidate.writeMode !== "text") {
       notes.push(candidate.writeMode === "date" ? "日期字段需要核对格式" : "选择控件需要核对选项");
     }
     if (candidate.confidence < 0.68) {
-      notes.push("AI 置信度偏低");
+      notes.push("AI 判断不够确定，已转为待处理");
     }
     if (mapping?.reason) {
       notes.push(`原因：${normalizeText(mapping.reason, 120)}`);
@@ -4189,20 +4188,20 @@
   function buildCandidateWarning(field, entry, score, writeMode) {
     const notes = [];
     if (!field.canFill) {
-      notes.push("当前控件不可写入");
+      notes.push("当前控件暂不支持自动填写");
     }
     if (field.hasCurrentValue) {
-      notes.push(score >= 84 ? "当前字段已有内容，写入时会覆盖" : "当前字段已有内容，低置信度时不会自动覆盖");
+      notes.push(score >= 84 ? "当前字段已有内容，自动填写时会覆盖" : "当前字段已有内容，已转为待处理");
     }
     if (writeMode !== "text") {
       if (writeMode === "date") {
         notes.push("日期字段需要核对格式");
       } else {
-        notes.push("可能需要点开选择，先人工确认");
+        notes.push("可能需要手动点开选择，已转为待处理");
       }
     }
     if (score < 40) {
-      notes.push("匹配分数偏低");
+      notes.push("匹配不够确定，已转为待处理");
     }
     if (!entry?.hasValue) {
       notes.push("本地资料未填写");
@@ -4493,9 +4492,9 @@
       return { plan };
     }
 
-    setAutofillAiTrying("字段映射");
-    setAutofillProgress("AI 生成映射", 76, "正在匹配页面字段和本地资料目录");
-    setProfilePanelStatus("正在调用 AI 识别字段语义。只发送字段目录，不发送资料值...");
+    setAutofillAiTrying("字段理解");
+    setAutofillProgress("AI 识别字段", 76, "正在匹配页面字段和本机资料项");
+    setProfilePanelStatus("正在用 AI 辅助识别字段。只发送字段名称，不发送资料值...");
     const response = await sendRuntimeMessage({
       type: "OJAF_MAP_FIELDS",
       payload: {
@@ -4509,8 +4508,8 @@
       .map((mapping) => createAiAutofillCandidate(mapping, scan, entries))
       .filter(Boolean);
     const enhancedPlan = mergeAiCandidatesIntoPlan(plan, aiCandidates, response?.notes || []);
-    setAutofillAiUsed("字段映射");
-    setAutofillProgress("AI 生成映射", 86, `已合并 ${aiCandidates.length} 项`);
+    setAutofillAiUsed("字段理解");
+    setAutofillProgress("AI 识别字段", 86, `已整理 ${aiCandidates.length} 项建议`);
 
     return {
       plan: enhancedPlan
@@ -4519,9 +4518,9 @@
 
   async function enhanceScanWithAi(scan) {
     try {
-      setAutofillAiTrying("页面结构分析");
-      setAutofillProgress("AI 分析页面结构", 50, "正在识别字段名称和控件类型");
-      setProfilePanelStatus("正在分析页面结构，只发送字段信息...");
+      setAutofillAiTrying("表单字段识别");
+      setAutofillProgress("AI 识别表单字段", 50, "正在识别字段名称和控件类型");
+      setProfilePanelStatus("正在用 AI 辅助识别表单字段，只发送字段信息...");
       const response = await sendRuntimeMessage({
         type: "OJAF_ANALYZE_PAGE_STRUCTURE",
         payload: {
@@ -4531,8 +4530,8 @@
 
       const hints = Array.isArray(response?.fieldHints) ? response.fieldHints : [];
       if (hints.length === 0) {
-        setAutofillAiNoResult("页面结构分析", "页面结构 AI 未返回字段增强结果");
-        setAutofillProgress("分析页面结构", 60, "AI 未返回增强结果，继续使用本地规则");
+        setAutofillAiNoResult("表单字段识别", "AI 未返回可用字段建议");
+        setAutofillProgress("整理表单字段", 60, "AI 没有提供可用建议，继续使用本地规则");
         return { scan };
       }
 
@@ -4557,8 +4556,8 @@
         };
       }
 
-      setAutofillAiUsed("页面结构分析");
-      setAutofillProgress("AI 分析页面结构", 60, `已识别 ${hints.length} 项`);
+      setAutofillAiUsed("表单字段识别");
+      setAutofillProgress("AI 识别表单字段", 60, `已识别 ${hints.length} 项`);
 
       return {
         scan: {
@@ -4572,9 +4571,9 @@
         }
       };
     } catch (error) {
-      setAutofillAiFallback("页面结构分析", error);
-      setAutofillProgress("分析页面结构", 58, "AI 不可用，已回退本地规则");
-      setProfilePanelStatus("页面结构 AI 不可用，已使用本地规则继续。");
+      setAutofillAiFallback("表单字段识别", error);
+      setAutofillProgress("整理表单字段", 58, "AI 不可用，已使用本地规则继续");
+      setProfilePanelStatus("AI 不可用，已使用本地规则继续识别表单字段。");
       return {
         scan
       };
@@ -4601,7 +4600,7 @@
       setAutofillProgress("扫描当前页面", 24, "本地扫描页面字段并展开可编辑区域");
       setProfilePanelStatus("正在本地扫描当前页面并准备自动填写...");
       const baseScan = await scanForm();
-      setAutofillProgress("分析页面结构", 42, `本地已发现 ${baseScan.fields.length} 个可见字段`);
+      setAutofillProgress("整理表单字段", 42, `本地已发现 ${baseScan.fields.length} 个可见字段`);
       const aiStructure = await enhanceScanWithAi(baseScan);
       const scan = aiStructure.scan || baseScan;
       setAutofillProgress("匹配本地资料", 64, `本地规则正在匹配 ${scan.fields.length} 个字段`);
@@ -4611,14 +4610,14 @@
         const aiResult = await enhancePlanWithAi(scan, plan);
         plan = aiResult.plan || plan;
       } catch (error) {
-        setAutofillAiFallback("字段映射", error);
+        setAutofillAiFallback("字段理解", error);
         setAutofillProgress("匹配本地资料", 84, "AI 不可用，已使用本地规则整理匹配结果");
       }
 
-      if (plan.mappingSource === "本地规则" && (autofillAiState.usedPhases || []).includes("页面结构分析")) {
+      if (plan.mappingSource === "本地规则" && (autofillAiState.usedPhases || []).includes("表单字段识别")) {
         plan = {
           ...plan,
-          mappingSource: "AI 页面结构 + 本地规则"
+          mappingSource: "AI 表单字段识别 + 本地规则"
         };
       }
 
@@ -4630,10 +4629,10 @@
       const autoFillCount = plan.autoFillIds.size;
       setProfilePanelStatus(
         plan.candidates.length > 0
-          ? `${aiStatus} 已匹配 ${plan.candidates.length} 项，将直接写入 ${autoFillCount} 项。`
+          ? `${aiStatus} 已匹配 ${plan.candidates.length} 项，将自动填写 ${autoFillCount} 项。`
           : `${aiStatus} 没有找到可自动匹配的字段。`
       );
-      setAutofillProgress("匹配完成", 90, "本地规则匹配完成，准备写入当前网页");
+      setAutofillProgress("匹配完成", 90, "本地规则匹配完成，准备自动填写当前网页");
       return {
         ok: true,
         plan,
@@ -4676,7 +4675,7 @@
         : new Set(Array.isArray(plan?.autoFillIds) ? plan.autoFillIds : []);
 
       if (!plan || autoFillIds.size === 0) {
-        setProfilePanelStatus("没有找到可直接填写的字段。可以打开详情面板手动查看和复制资料。", true);
+        setProfilePanelStatus("本页没有自动填写项，橙色字段需要手动处理。可以打开资料面板查看和复制资料。", true);
         const skippedCount = await markDeferredPlanCandidates(plan, autoFillIds);
         const summary = {
           attempted: 0,
@@ -4684,7 +4683,7 @@
           failed: 0,
           skipped: skippedCount || plan?.candidates?.length || 0,
           total: plan?.candidates?.length || 0,
-          message: "没有找到高置信度可直填字段，橙色标记需要手动处理。",
+          message: "没有找到可自动填写的字段，橙色标记需要手动处理。",
           aiUsage
         };
         setAutofillSummary(summary);
@@ -4698,7 +4697,7 @@
         };
       }
 
-      setAutofillProgress("写入匹配项", 94, `本地准备写入 ${autoFillIds.size} 项`);
+      setAutofillProgress("填写匹配项", 94, `本地准备填写 ${autoFillIds.size} 项`);
       const beforeCount = autoFillIds.size;
       const fillResult = await applyAutofillPlan(plan, autoFillIds, { runId });
       if (profilePanelVisible) {
@@ -4735,19 +4734,19 @@
 
     const autoFillSet = autoFillIds instanceof Set ? autoFillIds : new Set(autoFillIds || []);
     if (!plan || autoFillSet.size === 0) {
-      setProfilePanelStatus("没有找到可直接写入的匹配项。", true);
+      setProfilePanelStatus("没有找到可自动填写的匹配项。", true);
       return { ok: false, reason: "no autofill candidates" };
     }
 
     const autoFillCandidates = plan.candidates.filter((candidate) => autoFillSet.has(candidate.id));
     if (autoFillCandidates.length === 0) {
-      setProfilePanelStatus("没有找到可写入项。", true);
+      setProfilePanelStatus("没有找到可自动填写项。", true);
       return { ok: false, reason: "empty autofill candidates" };
     }
 
-    setProfilePanelStatus("正在把匹配项写入当前网页...");
+    setProfilePanelStatus("正在把匹配项填写到当前网页...");
     if (isCurrentAutofillRun(runId)) {
-      setAutofillProgress("写入匹配项", 94, `本地准备写入 ${autoFillCandidates.length} 项`);
+      setAutofillProgress("填写匹配项", 94, `本地准备填写 ${autoFillCandidates.length} 项`);
     }
     const results = [];
 
@@ -4768,7 +4767,7 @@
           note = fillResult?.reason || fillResult?.warning || "";
         }
       } else {
-        note = "未找到可写入控件";
+        note = "未找到可自动填写控件";
       }
 
       if (element) {
@@ -4777,7 +4776,7 @@
 
       if (isCurrentAutofillRun(runId)) {
         const percent = 94 + Math.round(((index + 1) / autoFillCandidates.length) * 6);
-        setAutofillProgress("写入匹配项", percent, `本地已处理 ${index + 1}/${autoFillCandidates.length} 项`);
+        setAutofillProgress("填写匹配项", percent, `本地已处理 ${index + 1}/${autoFillCandidates.length} 项`);
       }
 
       results.push({
@@ -4893,7 +4892,7 @@
 
     if (element instanceof HTMLSelectElement) {
       const matched = setSelectValue(element, value);
-      return { ok: true, warning: matched ? "" : "未找到完全匹配的下拉选项，已尝试按原值写入" };
+      return { ok: true, warning: matched ? "" : "下拉选项需要手动确认，已尝试按原值填写" };
     }
 
     if (element.isContentEditable) {
@@ -5407,7 +5406,7 @@
     const source = filled.length > 0 ? filled : section.items;
     const labels = source.slice(0, 5).map((item) => item.label).join("、");
     if (!labels) {
-      return "点开查看详情";
+      return "点开查看资料";
     }
     return labels;
   }

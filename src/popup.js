@@ -23,7 +23,7 @@ initialize();
 
 async function initialize() {
   try {
-    setStatus("点击开始填写后，右下角会实时显示当前是本地规则还是 AI；AI 只看字段信息，不看简历值，不可用会自动回退。");
+    setStatus("点击开始填写后，右下角会实时显示当前是本地规则还是 AI；AI 不可用也能继续用本地规则填写。");
     await syncRuntimeState();
   } catch (error) {
     setStatus(`读取页面失败：${error.message}`, true);
@@ -68,7 +68,7 @@ function applyRuntimeState(state = {}, options = {}) {
 async function showProfilePanel() {
   try {
     await sendToActiveTab({ type: "OJAF_SHOW_PROFILE_PANEL" });
-    setStatus("已打开右侧资料栏。");
+    setStatus("已打开资料面板。");
     await syncRuntimeState({ updateStatus: false });
   } catch (error) {
     setStatus(`打开失败：${error.message}`, true);
@@ -86,12 +86,12 @@ async function startAutofill() {
       if (data.filled != null) {
         setStatus(`已完成一键填写：已填写 ${data.filled || 0} 项，待处理 ${getPendingCount(data)} 项。${formatAiCompletionNote(data.aiUsage || {})}`);
       } else {
-        setStatus("已完成扫描处理。页面上的橙色标记需要手动处理，也可以打开右侧资料栏查看和复制资料。");
+        setStatus("已完成扫描处理。页面上的橙色标记需要手动处理，也可以打开资料面板查看和复制资料。");
       }
     } else if (data.reason === "cancelled") {
-      setStatus("已取消写入。");
+      setStatus("已取消填写。");
     } else if (data.reason === "no candidates") {
-      setStatus(`没有找到可直接填写的字段。橙色标记需要手动处理，也可以打开右侧资料栏查看和复制资料。${formatAiCompletionNote(data.aiUsage || {})}`);
+      setStatus(`没有找到可自动填写的字段。橙色标记需要手动处理，也可以打开资料面板查看和复制资料。${formatAiCompletionNote(data.aiUsage || {})}`);
     } else if (data.reason === "busy") {
       setStatus("当前已有扫描任务在运行，请稍候。", true);
     } else if (data.reason) {
@@ -109,7 +109,7 @@ async function startAutofill() {
 async function clearMarks() {
   try {
     await sendToActiveTab({ type: "OJAF_CLEAR_MARKS" });
-    setStatus("已清除当前页面的填写标记。");
+    setStatus("已清除颜色标记，不会修改表单内容。");
     await syncRuntimeState({ updateStatus: false });
   } catch (error) {
     setStatus(`清除失败：${error.message}`, true);
@@ -119,36 +119,35 @@ async function clearMarks() {
 function formatRuntimeAiNote(aiUsage = {}, elapsed = "") {
   const status = aiUsage.status || "";
   if (status === "trying") {
-    const phase = aiUsage.currentPhase ? ` ${aiUsage.currentPhase}` : "";
-    return ` 正在尝试 AI${phase}，资料值不会发送${elapsed ? `，已等待 ${elapsed}` : ""}。`;
+    return ` 正在用 AI 辅助识别字段，资料值不会发送${elapsed ? `，已等待 ${elapsed}` : ""}。`;
   }
   if (aiUsage.used && aiUsage.fallback) {
-    return " AI 部分参与，不可用步骤已回退本地规则。";
+    return " AI 辅助识别了部分字段，其余已用本地规则继续。";
   }
   if (aiUsage.used) {
-    return " AI 已参与分析/映射，写入阶段仍在本地执行。";
+    return " AI 已辅助识别字段，具体填写仍在本机完成。";
   }
   if (aiUsage.fallback) {
-    return " AI 不可用，已回退本地规则。";
+    return " AI 不可用，已使用本地规则继续。";
   }
   if (status === "no-result" || aiUsage.attempted) {
-    return " AI 未返回可用增强，继续使用本地规则。";
+    return " AI 没有提供可用建议，继续使用本地规则。";
   }
-  return " 当前按本地规则处理；API 可用时才会尝试 AI 增强。";
+  return " 如果配置了 AI，会辅助识别字段；否则使用本地规则。";
 }
 
 function formatAiCompletionNote(aiUsage = {}) {
   if (aiUsage.used && aiUsage.fallback) {
-    return "本次 AI 部分参与，不可用步骤已回退本地规则。";
+    return "本次 AI 辅助识别了部分字段，其余使用本地规则完成。";
   }
   if (aiUsage.used) {
-    return "本次 AI 参与分析/映射，写入阶段本地执行。";
+    return "本次 AI 辅助识别字段，具体填写在本机完成。";
   }
   if (aiUsage.fallback) {
-    return "本次实际使用本地规则；AI 不可用，已回退。";
+    return "本次使用本地规则完成；AI 不可用。";
   }
   if (aiUsage.status === "no-result" || aiUsage.attempted) {
-    return "本次 AI 未产生可用增强，实际使用本地规则。";
+    return "本次 AI 没有提供可用建议，实际使用本地规则。";
   }
   return "本次使用本地规则。";
 }

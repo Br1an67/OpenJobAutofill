@@ -623,9 +623,9 @@ async function saveApiSettings() {
     });
 
     if (!apiPermissionGranted) {
-      const reason = apiPermissionError ? `：${apiPermissionError}` : "，测试连接时可以重新授权。";
+      const reason = apiPermissionError ? `：${apiPermissionError}` : "，测试 API 连接时可以重新授权。";
       setStatus(`API 设置已保存，但还没有获得 API 域名访问权限${reason}`);
-      setApiSaved("API 设置已保存；如需使用 AI，请在测试连接时授权 API 域名。", apiConfig);
+      setApiSaved("API 设置已保存；如需使用 AI，请在测试 API 连接时授权 API 域名。", apiConfig);
       showToast("API 设置已保存，AI 使用前还需要授权 API 域名。", "busy");
       return;
     }
@@ -652,7 +652,7 @@ async function saveProfile() {
       type: "OJAF_SAVE_SETTINGS",
       payload: { profileV2 }
     });
-    setStatus("简历资料保存成功，已写入本机的 chrome.storage.local。");
+    setStatus("简历资料保存成功，已保存到本机浏览器。");
     setProfileSaved("资料已保存到本机。");
     showToast("资料已保存到本机。");
   } catch (error) {
@@ -700,7 +700,7 @@ async function importProfileFromFile() {
       type: "OJAF_SAVE_SETTINGS",
       payload: { profileV2 }
     });
-    setStatus("已导入并保存到本机。侧边栏会立即读取这份简历资料。");
+    setStatus("已导入并保存到本机。资料面板会立即读取这份简历资料。");
     setProfileSaved("资料已导入并保存到本机。");
     showToast("资料已导入并保存到本机。");
   } catch (error) {
@@ -744,20 +744,20 @@ async function testConnection() {
     const usingUnsavedConfig = apiHasUnsavedChanges;
     setStatus(
       usingUnsavedConfig
-        ? "正在用当前未保存的 API 表单值测试连接；测试通过后仍需点击保存才会用于自动填写。"
-        : "正在测试连接，不会发送你的资料值..."
+        ? "正在用当前未保存的 API 表单值测试 API 连接；测试成功后还要保存才会用于填写。"
+        : "正在测试 API 连接，不会发送你的资料值..."
     );
     setInlineFeedback(
       usingUnsavedConfig
-        ? "正在用未保存的 API 表单值测试连接..."
-        : "正在测试连接...",
+        ? "正在用未保存的 API 表单值测试 API 连接..."
+        : "正在测试 API 连接...",
       false,
       usingUnsavedConfig ? "dirty" : ""
     );
     setApiPreview("");
     const hasApiPermission = await ensureApiHostPermissions(apiConfig, { prompt: true });
     if (!hasApiPermission) {
-      throw new Error("未授权 API 域名访问权限，无法测试连接。");
+      throw new Error("未授权 API 域名访问权限，无法测试 API 连接。");
     }
 
     const result = await sendRuntimeMessage({
@@ -767,7 +767,7 @@ async function testConnection() {
     setStatus("连接正常，响应预览已显示在 API 设置下方。");
     setInlineFeedback(
       usingUnsavedConfig
-        ? "连接正常；当前 API 设置尚未保存，请点击“保存 API 设置”后再用于自动填写。"
+        ? "测试成功，但还没保存；点击“保存 API 设置”后才会用于填写。"
         : result.contentPreview ? "连接正常，响应预览见下方。" : "连接正常。",
       false,
       usingUnsavedConfig ? "dirty" : "saved"
@@ -786,7 +786,7 @@ async function refreshModelList(options = {}) {
     const usingUnsavedConfig = apiHasUnsavedChanges;
     if (!shouldAttemptModelList(apiConfig)) {
       if (!options.silent) {
-        const message = "当前配置还不能自动推断模型列表，请先补全 Base URL 或 Custom API URL。";
+        const message = "当前配置还不能自动刷新候选模型，请先补全 Base URL 或自定义接口地址。";
         setStatus(message, true);
         setInlineFeedback(message, true);
       }
@@ -796,13 +796,13 @@ async function refreshModelList(options = {}) {
     if (!options.silent) {
       setStatus(
         usingUnsavedConfig
-          ? "正在用当前未保存的 API 表单值刷新模型列表；刷新不会自动保存配置。"
-          : "正在刷新模型列表..."
+          ? "正在用当前未保存的 API 表单值刷新候选模型；刷新只更新候选模型，不会保存 API 设置。"
+          : "正在刷新候选模型..."
       );
       setInlineFeedback(
         usingUnsavedConfig
-          ? "正在用未保存的 API 表单值刷新模型列表..."
-          : "正在刷新模型列表...",
+          ? "正在用未保存的 API 表单值刷新候选模型..."
+          : "正在刷新候选模型...",
         false,
         usingUnsavedConfig ? "dirty" : ""
       );
@@ -811,7 +811,7 @@ async function refreshModelList(options = {}) {
     const hasApiPermission = await ensureApiHostPermissions(apiConfig, { prompt: !options.silent });
     if (!hasApiPermission) {
       if (!options.silent) {
-        const message = "未授权 API 域名访问权限，无法刷新模型列表。";
+        const message = "未授权 API 域名访问权限，无法刷新候选模型。";
         setStatus(message, true);
         setInlineFeedback(message, true);
       }
@@ -825,14 +825,14 @@ async function refreshModelList(options = {}) {
     renderModelOptions(Array.isArray(result.models) ? result.models : []);
 
     const count = Array.isArray(result.models) ? result.models.length : 0;
-    const message = count > 0 ? `已加载 ${count} 个模型候选，仍可手动输入任意模型名。` : "模型列表为空，仍可手动输入模型名。";
-    const suffix = usingUnsavedConfig ? " 当前 API 设置尚未保存，请点击“保存 API 设置”。" : "";
+    const message = count > 0 ? `已加载 ${count} 个候选模型，仍可手动输入任意模型名。` : "候选模型为空，仍可手动输入模型名。";
+    const suffix = usingUnsavedConfig ? " 还没保存，保存后才会用于填写。" : "";
     setStatus(`${message}${suffix}`);
     setInlineFeedback(`${message}${suffix}`, false, usingUnsavedConfig ? "dirty" : "");
   } catch (error) {
     if (!options.silent) {
-      setStatus(`刷新模型列表失败：${error.message}`, true);
-      setInlineFeedback(`刷新模型列表失败：${error.message}`, true);
+      setStatus(`刷新候选模型失败：${error.message}`, true);
+      setInlineFeedback(`刷新候选模型失败：${error.message}`, true);
     }
   }
 }
@@ -1055,8 +1055,8 @@ function renderProfileTips(activeKey = "") {
     "像网申页面一样直接填字段；保存时会在后台整理成本机资料备份。",
     "同一个值如果不同网站叫法不同，可以点“添加自定义字段”补充别名。",
     "没有的经历可以留空；经历类模块可以添加多条。",
-    "资料只保存在本机 chrome.storage.local，不会同步到云端。",
-    "AI 只接收页面字段和资料字段目录，不接收你填写的资料值。"
+    "资料只保存在本机浏览器里，不会同步到云端。",
+    "AI 只辅助识别表单字段，不接收你填写的资料值。"
   ];
 
   fields.profileTips.innerHTML = `

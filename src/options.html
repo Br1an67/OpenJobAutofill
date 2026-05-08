@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">OpenJobAutofill</p>
           <h1>维护本机简历资料</h1>
-          <p class="hint">数据只保存在本机的 <code>chrome.storage.local</code>，不会走同步云端。AI 只分析页面结构和本地资料字段目录，不会读取你的简历值。点击开始填写后会直接写入高置信度字段，低置信度字段可在右侧资料栏查看和手动复制。</p>
+          <p class="hint">数据只保存在本机浏览器里，不会走同步云端。AI 只辅助识别表单字段和可匹配的资料项，不会读取你的简历值。点击开始填写后会自动填写能确定的字段，待处理字段可在资料面板查看和手动复制。</p>
         </div>
       </header>
 
@@ -37,7 +37,7 @@
             </li>
           </ol>
           <p class="optional-api-note">
-            AI 页面分析是可选增强：如果希望模型辅助理解表单字段，再到下方 API 设置填写 API Key、Base URL 和模型名，并点击“测试连接”。不配置 API 时仍可使用本地规则填写。
+            AI 页面分析是可选增强：如果希望模型辅助理解表单字段，再到下方 API 设置填写 API Key、Base URL 和模型名。测试 API 连接只验证当前表单值，点击“保存 API 设置”后才会用于填写。不配置 API 时仍可使用本地规则填写。
           </p>
         </div>
       </section>
@@ -52,7 +52,7 @@
           <div class="profile-card-head">
             <div>
               <h2>简历资料</h2>
-              <p class="hint">这里按通用网申栏目拆开填写。保存后资料只写入本机扩展存储，需要迁移或备份时再导出资料备份。</p>
+              <p class="hint">这里按通用网申栏目拆开填写。保存后资料只保存在本机浏览器里，需要迁移或备份时再导出资料备份。</p>
             </div>
           </div>
           <div id="profileSectionEditor" class="profile-section-editor"></div>
@@ -60,8 +60,8 @@
             <button id="saveProfile" type="button">保存资料</button>
             <button id="exportProfile" class="secondary" type="button">导出资料备份</button>
             <button id="importProfile" class="secondary" type="button">导入资料备份</button>
-            <button id="resetProfile" class="ghost" type="button">恢复模板</button>
-            <button id="clearLocalData" class="ghost danger" type="button">清空本地数据</button>
+            <button id="resetProfile" class="ghost" type="button">恢复空白模板</button>
+            <button id="clearLocalData" class="ghost danger" type="button">清空资料和 API 设置</button>
           </div>
           <p id="profileFeedback" class="profile-feedback" aria-live="polite">资料加载后，编辑任意字段会在这里提示是否需要保存。</p>
           <input id="profileFileInput" type="file" accept="application/json,.json" hidden />
@@ -71,8 +71,8 @@
           <div class="side-title">填写提示</div>
           <div class="privacy-card">
             <div class="privacy-title">隐私边界</div>
-            <p>资料只保存在本机 <code>chrome.storage.local</code>。</p>
-            <p>AI 只看页面字段和资料字段目录，不接收具体资料值。</p>
+            <p>资料只保存在本机浏览器里。</p>
+            <p>AI 只辅助识别表单字段，不接收具体资料值。</p>
             <p>插件不会自动提交表单。</p>
           </div>
           <div id="profileTips" class="profile-tips"></div>
@@ -100,11 +100,11 @@
             模型名
             <input id="model" type="text" list="modelOptions" placeholder="例如 your-custom-model" />
             <datalist id="modelOptions"></datalist>
-            <span class="field-help">可以手动输入任意模型名；刷新模型列表只会提供候选，不会限制这里的输入。</span>
+            <span class="field-help">可以手动输入任意模型名；刷新候选模型只会提供建议，不会限制这里的输入。</span>
           </label>
 
           <label>
-            模型候选（可选）
+            模型候选（刷新后可选）
             <select id="modelPreset">
               <option value="">手动输入 / 不使用候选</option>
             </select>
@@ -117,7 +117,7 @@
             </label>
 
             <label>
-              Endpoint Path
+              接口路径 Endpoint Path
               <input id="endpointPath" type="text" placeholder="/chat/completions" />
             </label>
 
@@ -134,7 +134,7 @@
 
           <div class="mode-block" data-mode="custom">
             <label>
-              Custom API URL
+              自定义接口地址 Custom API URL
               <input id="customUrl" type="url" placeholder="https://api.example.com/map-fields" />
             </label>
 
@@ -152,12 +152,12 @@
             </label>
 
             <label>
-              Body Template
+              请求模板 Body Template
               <textarea id="customBodyTemplate" rows="10" spellcheck="false"></textarea>
             </label>
 
             <label>
-              Response Path
+              响应路径 Response Path
               <input id="customResponsePath" type="text" placeholder="choices.0.message.content" />
             </label>
 
@@ -168,8 +168,8 @@
 
           <div class="actions">
             <button id="saveApiSettings" type="submit">保存 API 设置</button>
-            <button id="refreshModels" class="secondary" type="button">刷新模型列表</button>
-            <button id="testConnection" class="secondary" type="button">测试连接</button>
+            <button id="refreshModels" class="secondary" type="button">刷新候选模型</button>
+            <button id="testConnection" class="secondary" type="button">测试 API 连接</button>
           </div>
 
           <p id="apiFeedback" class="api-feedback" aria-live="polite"></p>
